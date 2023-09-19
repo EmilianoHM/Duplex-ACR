@@ -14,6 +14,7 @@ public class SRecibe {
           System.out.println("Servidor iniciado esperando por archivos..");
           File f = new File("");
           System.out.println("Prueba..");
+          System.out.println("Prueba 2");
           String ruta = f.getAbsolutePath();
           String carpeta="archivos";
           String ruta_archivos = ruta+"\\"+carpeta+"\\";
