@@ -12,6 +12,15 @@ public class C1 {
             String dir = "127.0.0.1";
             Socket cl = new Socket(dir,pto);
             System.out.println("Conexion con servidor establecida.. lanzando FileChooser..");
+            System.out.println("Menú:\n");
+              System.out.println("1) Ver carpeta local\n");
+              System.out.println("2) Ver carpeta remota\n");
+              System.out.println("3) Subir archivos/carpetas\n");
+              System.out.println("4) Descargar archivos/carpetas\n");
+              System.out.println("5) Renombrar archivos/carpetas\n");
+              System.out.println("6) Eliminar archivos/carpetas\n");
+              System.out.println("7) Copiar archivos/carpetas\n");
+              System.out.println("8) Crear archivos/carpetas\n");
             JFileChooser jf = new JFileChooser(); // Habilita la elecciòn de archivos
             //jf.setMultiSelectionEnabled(true);
             int r = jf.showOpenDialog(null); // Hacer visible la caja de JFIleChooser
