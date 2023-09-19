@@ -5,7 +5,7 @@ import java.io.*;
  *
  * @author axele
  */
-public class SRecibe {
+public class S1 {
     public static void main(String[] args){
       try{
           int pto = 8000;

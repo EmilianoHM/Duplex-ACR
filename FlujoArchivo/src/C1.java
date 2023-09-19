@@ -5,7 +5,7 @@ import javax.swing.JFileChooser;
  *
  * @author axele
  */
-public class CEnvia {
+public class C1 {
     public static void main(String[] args){
         try{
             int pto = 8000;
