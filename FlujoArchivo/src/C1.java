@@ -7,6 +7,7 @@ import javax.swing.JFileChooser;
  */
 public class C1 {
     public static void main(String[] args){
+        Socket cl2 = null; // hacer cl2 = new Socket(dir,pto+1) cuando entre en el switch o en el if
         try{
             int pto = 8000;
             String dir = "127.0.0.1";

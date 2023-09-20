@@ -28,7 +28,9 @@ public class S1 {
               
               EnviaListaRemoto(dos, rutaRemota);
               
-              
+              //2 servidores y 2 clientes, 1.- Solo manda nombre del archivo/carpeta
+              //manda el tamaño, manda la indicación de qué acción se hará
+              //La primer conexión siempre estará activo solo cada vez que se manden los archivos
               
             /*  long recibidos=0;
               int l=0, porcentaje=0;
