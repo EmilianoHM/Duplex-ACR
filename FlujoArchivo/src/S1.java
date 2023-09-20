@@ -1,10 +1,6 @@
 import java.net.*;
 import java.io.*;
 
-/**
- *
- * @author axele
- */
 public class S1 {
     public static void main(String[] args){
       final String rutaLocal="."+"/"+"Local"+"/";
@@ -29,11 +25,11 @@ public class S1 {
               dos.writeUTF(rutaRemota);
               dos.flush();
               
-              EnviaListaRemoto(dos, RutaActualCliente);
+              //EnviaListaRemoto(dos, RutaActualCliente);
               
               long recibidos=0;
               int l=0, porcentaje=0;
-              while(recibidos<tam){
+            /*  while(recibidos<tam){
                   byte[] b = new byte[1500];
                   l = dis.read(b);
                   System.out.println("leidos: "+l);
@@ -42,7 +38,7 @@ public class S1 {
                   recibidos = recibidos + l;
                   porcentaje = (int)((recibidos*100)/tam);
                   System.out.print("\rRecibido el "+ porcentaje +" % del archivo");
-              }//while
+              }//while*/
               System.out.println("Archivo recibido..");
               dos.close();
               dis.close();
@@ -53,9 +49,10 @@ public class S1 {
           e.printStackTrace();
       }  
     }//main
-}
-
-    public static void EnviaListaRemoto(DataOutputStream dos,String ruta){ 
+    
+    
+            
+    public static void EnviaListaRemoto(DataOutputStream dos,String ruta)  throws IOException{ 
         File localFiles = new File(ruta);
         File[] listaArchivos = localFiles.listFiles();
         String nombre;
@@ -72,7 +69,8 @@ public class S1 {
             dos.flush();
         }       
     }
+    
+    
+}      
 
-    public static void enviar(DataOutputStream dos, String ruta){
 
-}
