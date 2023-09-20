@@ -1,10 +1,7 @@
 import java.net.*;
 import java.io.*;
 import javax.swing.JFileChooser;
-/**
- *
- * @author axele
- */
+
 public class C1 {
     public static void main(String[] args){
         Socket cl2 = null; // hacer cl2 = new Socket(dir,pto+1) cuando entre en el switch o en el if
