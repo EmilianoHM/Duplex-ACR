@@ -22,14 +22,17 @@ public class S1 {
               DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
               
               String rutaRemota=rutaLocal;
+              
               dos.writeUTF(rutaRemota);
               dos.flush();
               
-              //EnviaListaRemoto(dos, RutaActualCliente);
+              EnviaListaRemoto(dos, rutaRemota);
               
-              long recibidos=0;
+              
+              
+            /*  long recibidos=0;
               int l=0, porcentaje=0;
-            /*  while(recibidos<tam){
+              while(recibidos<tam){
                   byte[] b = new byte[1500];
                   l = dis.read(b);
                   System.out.println("leidos: "+l);
@@ -71,6 +74,4 @@ public class S1 {
     }
     
     
-}      
-
-
+}     
