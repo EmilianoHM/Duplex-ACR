@@ -7,29 +7,30 @@ import java.io.*;
  */
 public class S1 {
     public static void main(String[] args){
+      final String rutaLocal="."+"/"+"Local"+"/";
+      
+      File local=new File(rutaLocal);
+      local.mkdir();                              
+      System.out.println("Carpeta local lista...");
+      
       try{
           int pto = 8000;
           ServerSocket s = new ServerSocket(pto);
           s.setReuseAddress(true);
-          System.out.println("Servidor iniciado esperando por archivos..");
-          File f = new File("");
-          System.out.println("Prueba..");
-          System.out.println("Prueba 2");
-          String ruta = f.getAbsolutePath();
-          String carpeta="archivos";
-          String ruta_archivos = ruta+"\\"+carpeta+"\\";
-          System.out.println("ruta:"+ruta_archivos);
-          File f2 = new File(ruta_archivos);
-          f2.mkdirs();
-          f2.setWritable(true);
+          System.out.println("Servidor iniciado...");
           for(;;){
+              System.out.println("Esperando cliente...");
               Socket cl = s.accept();
               System.out.println("Cliente conectado desde "+cl.getInetAddress()+":"+cl.getPort());
               DataInputStream dis = new DataInputStream(cl.getInputStream());
-              String nombre = dis.readUTF();
-              long tam = dis.readLong();
-              System.out.println("Comienza descarga del archivo "+nombre+" de "+tam+" bytes\n\n");
-              DataOutputStream dos = new DataOutputStream(new FileOutputStream(ruta_archivos+nombre));
+              DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
+              
+              String rutaRemota=rutaLocal;
+              dos.writeUTF(rutaRemota);
+              dos.flush();
+              
+              EnviaListaRemoto(dos, RutaActualCliente);
+              
               long recibidos=0;
               int l=0, porcentaje=0;
               while(recibidos<tam){
@@ -52,4 +53,26 @@ public class S1 {
           e.printStackTrace();
       }  
     }//main
+}
+
+    public static void EnviaListaRemoto(DataOutputStream dos,String ruta){ 
+        File localFiles = new File(ruta);
+        File[] listaArchivos = localFiles.listFiles();
+        String nombre;
+        boolean esDir; //si es directorio
+        int length = listaArchivos.length;
+        dos.writeInt(length);
+        dos.flush();
+        for(File file: listaArchivos){
+            esDir = file.isDirectory();
+            nombre=file.getName();
+            dos.writeBoolean(esDir);
+            dos.flush();
+            dos.writeUTF(nombre);
+            dos.flush();
+        }       
+    }
+
+    public static void enviar(DataOutputStream dos, String ruta){
+
 }
