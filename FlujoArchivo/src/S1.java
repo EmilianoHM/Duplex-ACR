@@ -3,7 +3,7 @@ import java.net.*;
 import java.io.*;
 
 public class S1 {
-    public static void main(String[] args){
+    public static void main(String[] args) throws IOException{
       final String rutaRemota="."+"/"+"remoto"+"/";
       
       final String rutaLocal="."+"/"+"local"+"/";
