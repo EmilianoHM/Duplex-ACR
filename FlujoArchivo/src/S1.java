@@ -4,10 +4,12 @@ import java.io.*;
 
 public class S1 {
     public static void main(String[] args){
-      final String rutaServer="."+"/"+"Local"+"/";
+      final String rutaRemota="."+"/"+"remoto"+"/";
       
-      File local=new File(rutaServer);
-      local.mkdir();                              
+      final String rutaLocal="."+"/"+"local"+"/";
+      
+     /* File local=new File(rutaServer);
+      local.mkdir();  */                            
       System.out.println("Carpeta local lista...");
       
       
@@ -32,37 +34,49 @@ public class S1 {
               DataInputStream dis = new DataInputStream(cl.getInputStream());
               DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
               
-              String rutaCliente=rutaServer;
+              //String rutaCliente=rutaServer;
               
               //envia la ruta remoto
-              dos.writeUTF(rutaCliente);
-              dos.flush();
+             /* dos.writeUTF(rutaCliente);
+              dos.flush();*/
               
-              EnviaListaRemoto(dos, rutaCliente);
+              
               
               int solicitud;
               
               cicloWhile:
               while(true){
-                  solicitud=recibesolicitud(dis);
+                  solicitud=recibeSolicitud(dis);
 
                     switch (solicitud) {
                         case 0: //La conexion se inicio
                             break;
                         case 1:  //Abrir carpeta
                             // ******** Cambiar a visualizar archivos/carpetas ****************
-                            System.out.println("Case 1: Abrir carpeta");
+                            System.out.println("Case 1: Ver archivos carpeta local");
                             //recibimos la dirección de la carpeta que se quiere listar
-                            rutaCliente = recibeRuta(dis); //actualizamos la ruta en la que se encuentra el cliente
-                            System.out.println(rutaCliente);
-                            EnviaListaRemoto(dos, rutaCliente);
-                            System.out.println("Termino case 1");
-                            break;
                             
+                            File localFiles = new File(rutaCliente);
+                            File[] listaArchivos = localFiles.listFiles();
+                            String nombre;
+                            boolean esDir; //si es directorio
+                            int length = listaArchivos.length;
+                            dos.writeInt(length);
+                            dos.flush();
+                            for(File file: listaArchivos){
+                                esDir = file.isDirectory();
+                                nombre=file.getName();
+                                dos.writeBoolean(esDir);
+                                dos.flush();
+                                dos.writeUTF(nombre);
+                                dos.flush();
+                            
+                            break;
+                            /*
                         case 2:
                             System.out.println("Case 2: Subir archivo/carpeta");
                             obtenerArchivo(dis, rutaCliente);
-                            EnviaListaRemoto(dos, rutaCliente);//"refresh" a la carpeta
+                            enviaLista(dos, rutaCliente);//"refresh" a la carpeta
                             break;
                         case 3: {
                             System.out.println("Case 3: Descargar archivo/carpeta");
@@ -75,7 +89,7 @@ public class S1 {
                             System.out.println("Case 4: Eliminar archivo/carpeta");
                             String direccionArchivo = recibeRuta(dis);
                             eliminarArchivo(direccionArchivo);
-                            EnviaListaRemoto(dos, rutaCliente);//"refresh" a la carpeta
+                            enviaLista(dos, rutaCliente);//"refresh" a la carpeta
                             break;
                         }
                         // *********** Agregar Renombrar archivos/carpetas ************
@@ -99,7 +113,7 @@ public class S1 {
                             dos.flush();
                             
                             System.out.println("Ruta actual: " + rutaCliente);
-                            EnviaListaRemoto(dos, rutaCliente);
+                            enviaLista(dos, rutaCliente);
                             break;
                         case 6:
                             System.out.println("Case 6: cerrar la conexión");
@@ -122,9 +136,9 @@ public class S1 {
                         break;
                             
                         case 8:
-                            EnviaListaRemoto(dos, rutaCliente);//refresh de la carpeta                          
+                            enviaLista(dos, rutaCliente);//refresh de la carpeta                          
                         break;
-                                                 
+                            */                     
                     }
                   
               } //fin ciclo While(true)
@@ -142,7 +156,7 @@ public class S1 {
     
     
             
-    public static void EnviaListaRemoto(DataOutputStream dos,String ruta)  throws IOException{ 
+    public static void enviaLista(DataOutputStream dos,String ruta)  throws IOException{ 
         File localFiles = new File(ruta);
         File[] listaArchivos = localFiles.listFiles();
         String nombre;
@@ -168,7 +182,7 @@ public class S1 {
     }   
     
     
-    public static int recibesolicitud(DataInputStream dis) throws IOException{ 
+    public static int recibeSolicitud(DataInputStream dis) throws IOException{ 
         int solicitud;
         solicitud=dis.readInt();
         return solicitud;
