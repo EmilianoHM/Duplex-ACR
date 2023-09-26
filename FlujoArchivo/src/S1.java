@@ -6,7 +6,7 @@ public class S1 {
     public static void main(String[] args) throws IOException{
       final String rutaRemota="."+"/"+"remoto"+"/";
       
-      final String rutaLocal="."+"/"+"local"+"/";
+      String rutaLocal="."+"/"+"local"+"/";
       
      /* File local=new File(rutaServer);
       local.mkdir();  */                            
@@ -25,8 +25,8 @@ public class S1 {
           s.setReuseAddress(true);
           System.out.println("Servidor iniciado...");
           
-          ServerSocket s2 = new ServerSocket(pto+1);
-          s2.setReuseAddress(true);
+          //ServerSocket s2 = new ServerSocket(pto+1);
+          //s2.setReuseAddress(true);
           for(;;){
               System.out.println("Esperando cliente...");
               Socket cl = s.accept();
@@ -34,14 +34,14 @@ public class S1 {
               DataInputStream dis = new DataInputStream(cl.getInputStream());
               DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
               
-              //String rutaCliente=rutaServer;
+              String rutaLocal=rutaRemota;
               
-              //envia la ruta remoto
+              
              /* dos.writeUTF(rutaCliente);
               dos.flush();*/
               
               
-              
+              /*
               int solicitud;
               
               cicloWhile:
@@ -56,7 +56,7 @@ public class S1 {
                             System.out.println("Case 1: Ver archivos carpeta local");
                             //recibimos la dirección de la carpeta que se quiere listar
                             
-                            File localFiles = new File(rutaCliente);
+                            File localFiles = new File(rutaLocal);
                             File[] listaArchivos = localFiles.listFiles();
                             String nombre;
                             boolean esDir; //si es directorio
@@ -70,13 +70,13 @@ public class S1 {
                                 dos.flush();
                                 dos.writeUTF(nombre);
                                 dos.flush();
-                            
+                            }
                             break;
-                            /*
+                            
                         case 2:
                             System.out.println("Case 2: Subir archivo/carpeta");
-                            obtenerArchivo(dis, rutaCliente);
-                            enviaLista(dos, rutaCliente);//"refresh" a la carpeta
+                            obtenerArchivo(dis, rutaLocal);
+                            enviaLista(dos, rutaLocal);//"refresh" a la carpeta
                             break;
                         case 3: {
                             System.out.println("Case 3: Descargar archivo/carpeta");
@@ -89,7 +89,7 @@ public class S1 {
                             System.out.println("Case 4: Eliminar archivo/carpeta");
                             String direccionArchivo = recibeRuta(dis);
                             eliminarArchivo(direccionArchivo);
-                            enviaLista(dos, rutaCliente);//"refresh" a la carpeta
+                            enviaLista(dos, rutaLocal);//"refresh" a la carpeta
                             break;
                         }
                         // *********** Agregar Renombrar archivos/carpetas ************
@@ -101,19 +101,19 @@ public class S1 {
                             // ESTA NO ES NECESARIA
                             System.out.println("Case 5: volver a carpeta anterior");
                             //Verificamos que no supere a la ruta inicial (rutaCarpetaServer)
-                            if (rutaCliente.equals(rutaServer)) {
-                                rutaCliente = rutaServer;
+                            if (rutaLocal.equals(rutaRemota)) {
+                                rutaLocal = rutaRemota;
                             } else {
                                 //Obtenemos el padre y actualizamos la ruta actual a esa carpeta
-                                rutaCliente = new File(rutaCliente).getParent() + System.getProperty("file.separator"); 
+                                rutaLocal = new File(rutaLocal).getParent() + System.getProperty("file.separator"); 
                             }
                             
                             //enviaRutaRemoto
-                            dos.writeUTF(rutaCliente);
+                            dos.writeUTF(rutaLocal);
                             dos.flush();
                             
-                            System.out.println("Ruta actual: " + rutaCliente);
-                            enviaLista(dos, rutaCliente);
+                            System.out.println("Ruta actual: " + rutaLocal);
+                            enviaLista(dos, rutaLocal);
                             break;
                         case 6:
                             System.out.println("Case 6: cerrar la conexión");
@@ -126,7 +126,7 @@ public class S1 {
                             //****Nota***
                             //Si quiere subirse una carpeta al servidor esta primero debe crearse
                             System.out.println("Case 7: crear una carpeta");                           
-                            String nombre = rutaCliente+recibeRuta(dis); //recibimos nombre de la carpeta a crear
+                            String nombre = rutaLocal+recibeRuta(dis); //recibimos nombre de la carpeta a crear
                             System.out.println("Carpeta que se creara: "+ nombre);
                             File carpeta = new File(nombre);
                             if (carpeta.mkdir())
@@ -136,13 +136,12 @@ public class S1 {
                         break;
                             
                         case 8:
-                            enviaLista(dos, rutaCliente);//refresh de la carpeta                          
+                            enviaLista(dos, rutaLocal);//refresh de la carpeta                          
                         break;
-                            */                     
-                    }
+                    }  
                   
-              } //fin ciclo While(true)
-
+              } //fin ciclo While(true)*/
+               obtenerArchivo(dis,"C://Users//Dell//Desktop");
               System.out.println("Archivo recibido..");
               dos.close();
               dis.close();
@@ -195,7 +194,7 @@ public class S1 {
         String nombre = dis.readUTF();
         long tam = dis.readLong();
         System.out.println("Comienza descarga del archivo "+nombre+" de "+tam+" bytes\n\n");
-        DataOutputStream dos = new DataOutputStream(new FileOutputStream(Ruta_Archivo+nombre));
+        DataOutputStream dos = new DataOutputStream(new FileOutputStream(Ruta_Archivo+'/'+nombre));
         long recibidos=0;
         int l=0, porcentaje=0;
         while(recibidos<tam){
