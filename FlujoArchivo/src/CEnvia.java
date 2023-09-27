@@ -16,6 +16,8 @@ public class CEnvia {
             File f2 = new File(rutaClienteLocal);
             f2.mkdirs();
             f2.setWritable(true);
+            DataInputStream dis = new DataInputStream(cl.getInputStream());
+            DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
 
             Scanner scanner = new Scanner(System.in);
             while (true) {
@@ -40,34 +42,35 @@ public class CEnvia {
                         listarArchivosYCarpetasRecursivamente(rutaClienteLocal);
                         break;
                     case 2:
-                        listarDirectorioServidor(cl);
+                        listarDirectorioServidor(cl,dos,dis);
                         break;
                     case 3:
-                        enviaArchivo(cl);
+                        enviaArchivo(cl, dos, dis);
                         break;
                     case 4:
-                        solicitarArchivoAlServidor(cl, rutaClienteLocal);
+                        solicitarArchivoAlServidor(cl, rutaClienteLocal, dos, dis);
                         break;
                     case 5:
                         renombrarArchivo(rutaClienteLocal);
                         break;
                     case 6:
-                        //funcion para mandar solicitud al servidor
+                        solicitarRenombrarArchivoOCarpeta(cl, dos, dis);
                         break;
                     case 7:
-                    eliminarArchivoLocal(rutaClienteLocal);
+                         eliminarArchivoLocal(rutaClienteLocal);
                     break;
                     case 8:
-                    eliminarElementoServidor(cl);
+                         eliminarElementoServidor(cl, dos, dis);
                     break;
                     case 9:
                     //9) Copiar archivos/carpetas
                     break;
                     case 10:
-                    //10) Crear archivos/carpetas");
+                    //10) carpetas");
                     break;
                     case 0:
                         System.out.println("\nFinalizando..");
+                         dos.writeUTF("FINALIZAR_CLIENTE");
                         System.exit(0);
                     default:
                         System.out.println("Opción no válida.");
@@ -79,130 +82,7 @@ public class CEnvia {
             e.printStackTrace();
         }
     }
-
-    public static void solicitarArchivoAlServidor(Socket cl, String rutaClienteLocal) throws IOException {
-        try {
-            DataInputStream dis = new DataInputStream(cl.getInputStream());
-            DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
-
-            // Envía una solicitud al servidor para obtener un archivo específico
-            dos.writeUTF("SOLICITUD_ARCHIVO");
-
-            // Recibe el nombre del archivo desde el servidor
-            String nombreArchivo = dis.readUTF();
-
-            if (nombreArchivo.equals("ARCHIVO_NO_ENCONTRADO")) {
-                System.out.println("El archivo solicitado no se encontró en el servidor.");
-            } else {
-                recibirArchivoDelServidor(dis, rutaClienteLocal);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void recibirArchivoDelServidor(DataInputStream dis, String directorioDestino) throws IOException {
-        try {
-            String nombre = dis.readUTF();
-
-            if (nombre.equals("ARCHIVO_NO_ENCONTRADO")) {
-                System.out.println("El archivo solicitado no se encontró en el servidor.");
-            } else {
-                long Dimension = dis.readLong();
-                System.out.println("Comienza descarga del archivo " + nombre + " de " + Dimension + " bytes\n\n");
-
-                File directorio = new File(directorioDestino);
-                if (!directorio.exists()) {
-                    directorio.mkdirs();
-                }
-
-                FileOutputStream fos = new FileOutputStream(directorioDestino + File.separator + nombre);
-                byte[] buffer = new byte[1500];
-                int bytesRead;
-                long recibidos = 0;
-                int porcentaje = 0;
-
-                while (recibidos < Dimension) {
-                    bytesRead = dis.read(buffer);
-                    fos.write(buffer, 0, bytesRead);
-                    recibidos += bytesRead;
-                    porcentaje = (int) ((recibidos * 100) / Dimension);
-                    System.out.print("\rRecibido el " + porcentaje + " % del archivo");
-                }
-
-                fos.close();
-                System.out.println("\nArchivo " + nombre + " recibido y guardado en " + directorioDestino);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
- public static void enviaArchivo(Socket cl) throws IOException {
-    JFileChooser jf = new JFileChooser("C:\\Users\\Dell\\Downloads\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosDescargadosdelServidor\\archivosLocal");
-    jf.setMultiSelectionEnabled(true);
-    jf.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES); // Permite seleccionar directorios
-
-    int r = jf.showOpenDialog(null);
-
-    if (r == JFileChooser.APPROVE_OPTION) {
-        File[] seleccionados = jf.getSelectedFiles();
-        for (File seleccionado : seleccionados) {
-            if (seleccionado.isDirectory()) {
-                // Si es un directorio, llama a un método para enviar el directorio y su contenido
-                enviarDirectorio(cl, seleccionado);
-            } else {
-                // Si es un archivo, envía el archivo individual
-                enviarArchivoIndividual(cl, seleccionado);
-            }
-        }
-    }
-}
-
-private static void enviarDirectorio(Socket cl, File directorio) throws IOException {
-    DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
-
-    // Indica que se está enviando un directorio
-    dos.writeUTF("DIRECTORIO");
-    dos.writeUTF(directorio.getName());
-
-    // Envía la cantidad de archivos en el directorio
     
-    dos.writeInt(directorio.listFiles().length);
-
-    // Crea la carpeta en el servidor
-    File carpetaServidor = new File("C:\\Users\\Dell\\Downloads\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor\\" + File.separator + directorio.getName());
-    carpetaServidor.mkdirs();
-
-    for (File archivo : directorio.listFiles()) {
-        if (archivo.isDirectory()) {
-            // Si es un subdirectorio, llama recursivamente para enviarlo
-            enviarDirectorio(cl, archivo);
-        } else {
-            // Si es un archivo, envía el archivo individual
-            enviarArchivoIndividual(cl, archivo);
-        }
-    }
-}
-
-
-    private static void enviarArchivoIndividual(Socket cl, File archivo) throws IOException {
-        DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
-        DataInputStream dis = new DataInputStream(new FileInputStream(archivo));
-        dos.writeUTF("ARCHIVO");
-        dos.writeUTF(archivo.getName());
-        dos.writeLong(archivo.length());
-        System.out.println("Preparandose para enviar el archivo: "+archivo.getName());
-        byte[] buffer = new byte[1500];
-        int bytesRead;
-        while ((bytesRead = dis.read(buffer)) != -1) {
-            dos.write(buffer, 0, bytesRead);
-
-        }
-
-        dis.close();
-    }
     
 public static void listarArchivosYCarpetasRecursivamente(String rutaClienteLocal) {
     File directorio = new File(rutaClienteLocal);
@@ -214,13 +94,9 @@ public static void listarArchivosYCarpetasRecursivamente(String rutaClienteLocal
         System.out.println("La ruta no es un directorio válido.");
     }
 }
-
-
 private static void listarArchivosYCarpetasRecursivamenteAux(File directorio, String prefijo) {
     File[] archivosYCarpetas = directorio.listFiles();
-
     if (archivosYCarpetas != null) {
-        
         for (File archivoOcarpeta : archivosYCarpetas) {
             System.out.println(prefijo + (archivoOcarpeta.isDirectory() ? "Carpeta: " : "/") + archivoOcarpeta.getName());
 
@@ -231,55 +107,15 @@ private static void listarArchivosYCarpetasRecursivamenteAux(File directorio, St
     } else {
         System.out.println("El directorio está vacío.");
     }
-
-}
-    
-
-public static void listarArchivosYCarpetasServidor(Socket cl, String rutaServidor) throws IOException {
-    DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
-
-    // Envía una solicitud al servidor para listar la carpeta
-    dos.writeUTF("LISTAR_CARPETA");
-    dos.writeUTF(rutaServidor);
-
-    String respuesta = recibirRespuestaServidor(cl);
-
-    if (respuesta.equals("CARPETA_NO_ENCONTRADA")) {
-        System.out.println("La carpeta no se encontró en el servidor.");
-    } else {
-        System.out.println("Carpeta: " + rutaServidor);
-        listarArchivosYCarpetasRecursivamenteServidor(cl, "");
-    }
 }
 
-private static void listarArchivosYCarpetasRecursivamenteServidor(Socket cl, String espacio) throws IOException {
-    DataInputStream dis = new DataInputStream(cl.getInputStream());
-    int numArchivos = dis.readInt();
-    
-    for (int i = 0; i < numArchivos; i++) {
-        String tipo = dis.readUTF();
-        String nombre = dis.readUTF();
 
-        System.out.println(espacio + (tipo.equals("C") ? "Carpeta: " : "/") + nombre);
-
-        if (tipo.equals("C")) { // Si es una carpeta
-            listarArchivosYCarpetasRecursivamenteServidor(cl, espacio + "  "); // Añade dos espacios para la indentación
-        }
-    }
-}
-
-public static String recibirRespuestaServidor(Socket cl) throws IOException {
-    DataInputStream dis = new DataInputStream(cl.getInputStream());
-    return dis.readUTF();
-}
-
-public static void listarDirectorioServidor(Socket cl) throws IOException {
+public static void listarDirectorioServidor(Socket cl,DataOutputStream dos,DataInputStream dis)  {
     try {
-        DataInputStream dis = new DataInputStream(cl.getInputStream());
-        DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
 
         // Envía una solicitud al servidor para listar el directorio del servidor
         dos.writeUTF("LISTAR_CARPETA_SERVIDOR");
+        dos.flush();
 
         // Recibe y muestra la respuesta del servidor
         String respuesta = dis.readUTF();
@@ -327,9 +163,151 @@ private static void listarArchivosInternos(DataInputStream dis, int numArchivos)
         System.out.println("  " + archivoInterno);
     }
 }
+    
+ 
+
+public static void enviaArchivo(Socket cl, DataOutputStream dos, DataInputStream dis) { 
+    JFileChooser jf = new JFileChooser("C:\\Users\\Dell\\Downloads\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosDescargadosdelServidor\\archivosLocal");
+    
+    jf.setMultiSelectionEnabled(true);
+    jf.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES); // Permite seleccionar directorios
+
+    int r = jf.showOpenDialog(null);
+    
+
+    if (r == JFileChooser.APPROVE_OPTION) {
+        
+        File[] seleccionados = jf.getSelectedFiles();
+        for (File seleccionado : seleccionados) {
+            if (seleccionado.isDirectory()) {
+                // Si es un directorio, llama a un método para enviar el directorio y su contenido
+                enviarDirectorio(cl, seleccionado,dos, dis);
+            } else {
+                // Si es un archivo, envía el archivo individual
+                enviarArchivoIndividual(cl, seleccionado, dos);
+            }
+        }
+    }
+    
+}
+
+private static void enviarDirectorio(Socket cl, File directorio, DataOutputStream dos, DataInputStream dis) {
+try{
+    // Indica que se está enviando un directorio
+    dos.writeUTF("DIRECTORIO");
+    dos.flush();
+    dos.writeUTF(directorio.getName());
+    dos.flush();
+
+    // Envía la cantidad de archivos en el directorio
+    
+    dos.writeInt(directorio.listFiles().length);
+    dos.flush();
+
+    // Crea la carpeta en el servidor
+    File carpetaServidor = new File("C:\\Users\\Dell\\Downloads\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor\\" + File.separator + directorio.getName());
+    carpetaServidor.mkdirs();
+
+    for (File archivo : directorio.listFiles()) {
+        if (archivo.isDirectory()) {
+            // Si es un subdirectorio, llama recursivamente para enviarlo
+            enviarDirectorio(cl, archivo, dos, dis);
+        } else {
+            // Si es un archivo, envía el archivo individual
+            enviarArchivoIndividual(cl, archivo, dos);
+        }
+    }
+    }catch(IOException e){
+        e.printStackTrace();
+    }
+}
 
 
+    private static void enviarArchivoIndividual(Socket cl, File archivo, DataOutputStream dos) {
+        try{
+        DataInputStream dis = new DataInputStream(new FileInputStream(archivo));
+        dos.writeUTF("ARCHIVO");
+        dos.flush();
+        dos.writeUTF(archivo.getName());
+        dos.flush();
+        dos.writeLong(archivo.length());
+        dos.flush();
+        System.out.println("Preparandose para enviar el archivo: "+archivo.getName());
+        byte[] buffer = new byte[1500];
+        int bytesRead;
+        while ((bytesRead = dis.read(buffer)) != -1) {
+            dos.write(buffer, 0, bytesRead);
+            dos.flush();
 
+        }
+
+        //dis.close();
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+    }
+
+
+    public static void solicitarArchivoAlServidor(Socket cl, String rutaClienteLocal,DataOutputStream dos, DataInputStream dis) {
+        try {
+            
+
+            // Envía una solicitud al servidor para obtener un archivo específico
+            dos.writeUTF("SOLICITUD_ARCHIVO");
+            dos.flush();
+
+            // Recibe el nombre del archivo desde el servidor
+            String nombreArchivo = dis.readUTF();
+
+            if (nombreArchivo.equals("ARCHIVO_NO_ENCONTRADO")) {
+                System.out.println("El archivo solicitado no se encontró en el servidor.");
+            } else {
+                recibirArchivoDelServidor(dis, rutaClienteLocal);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void recibirArchivoDelServidor(DataInputStream dis, String directorioDestino) {
+        try {
+            String nombre = dis.readUTF();
+
+            if (nombre.equals("ARCHIVO_NO_ENCONTRADO")) {
+                System.out.println("El archivo solicitado no se encontró en el servidor.");
+            } else {
+                long Dimension = dis.readLong();
+                System.out.println("Comienza descarga del archivo " + nombre + " de " + Dimension + " bytes\n\n");
+
+                File directorio = new File(directorioDestino);
+                if (!directorio.exists()) {
+                    directorio.mkdirs();
+                }
+
+                FileOutputStream fos = new FileOutputStream(directorioDestino + File.separator + nombre);
+                byte[] buffer = new byte[1500];
+                int bytesRead;
+                long recibidos = 0;
+                int porcentaje = 0;
+
+                while (recibidos < Dimension) {
+                    bytesRead = dis.read(buffer);
+                    fos.write(buffer, 0, bytesRead);
+                    recibidos += bytesRead;
+                    porcentaje = (int) ((recibidos * 100) / Dimension);
+                    System.out.print("\rRecibido el " + porcentaje + " % del archivo");
+                }
+
+                fos.close();
+                System.out.println("\nArchivo " + nombre + " recibido y guardado en " + directorioDestino);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+ 
     public static void renombrarArchivo(String rutaClienteLocal) {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Ingrese el nombre actual del archivo o carpeta a renombrar: ");
@@ -374,6 +352,42 @@ private static void listarArchivosInternos(DataInputStream dis, int numArchivos)
 
         return false; // No se encontró el elemento en la ruta especificada
     }
+    
+    
+    
+public static void solicitarRenombrarArchivoOCarpeta(Socket cl, DataOutputStream dos, DataInputStream dis) {
+    try {
+        dos.writeUTF("RENOMBRAR_ARCHIVO_CARPETA");
+        dos.flush();
+
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Ingrese la ruta completa del archivo o carpeta a renombrar en el servidor: ");
+        String rutaRelativa = scanner.nextLine();
+        dos.writeUTF(rutaRelativa);
+        dos.flush();
+
+        System.out.print("Ingrese el nuevo nombre del archivo o carpeta: ");
+        String nuevoNombre = scanner.nextLine();
+        dos.writeUTF(nuevoNombre);
+        dos.flush();
+
+        String respuesta = dis.readUTF();
+
+        if (respuesta.equals("RENOMBRADO_EXITOSAMENTE")) {
+            System.out.println("Elemento renombrado con éxito en el servidor.");
+        } else if (respuesta.equals("NO_SE_PUDO_RENOMBRAR")) {
+            System.out.println("No se pudo renombrar el elemento en el servidor.");
+        } else if (respuesta.equals("ELEMENTO_NO_ENCONTRADO")) {
+            System.out.println("El elemento no se encontró en la ruta especificada.");
+        } else {
+            System.out.println("Respuesta desconocida del servidor: " + respuesta);
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+
+    
 
 
     
@@ -417,19 +431,19 @@ public static void eliminarArchivoLocal(String rutaClienteLocal) {
     }
 
 
-public static void eliminarElementoServidor(Socket cl) {
+public static void eliminarElementoServidor(Socket cl, DataOutputStream dos, DataInputStream dis) {
     try {
-        DataInputStream dis = new DataInputStream(cl.getInputStream());
-        DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
 
         // Envía una solicitud al servidor para eliminar un archivo o carpeta
         dos.writeUTF("ELIMINAR_ELEMENTO");
+        dos.flush();
 
         // Solicita al usuario la ruta del elemento a eliminar en el servidor
         System.out.print("Ingrese la ruta relativa del elemento a eliminar en el servidor: ");
         Scanner scanner = new Scanner(System.in);
         String rutaRelativa = scanner.nextLine();
         dos.writeUTF(rutaRelativa);
+        dos.flush();
 
         // Recibe la respuesta del servidor
         String respuesta = dis.readUTF();
