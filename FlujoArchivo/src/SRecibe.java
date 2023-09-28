@@ -6,7 +6,7 @@ import javax.swing.JFileChooser;
 
 public class SRecibe {
     public static void main(String[] args) {
-        final String RutaServidor = "C:\\Users\\Dell\\Downloads\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor\\";
+        final String RutaServidor = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor\\";
 
         try {
             int pto = 8000;
@@ -63,7 +63,7 @@ for (;;) {
     }
 
     public static void enviarArchivoAlCliente(DataOutputStream dos, String Ruta_Archivo, Socket cl) throws IOException {
-        JFileChooser jf = new JFileChooser("C:\\Users\\Dell\\Downloads\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor");
+        JFileChooser jf = new JFileChooser("C:\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor");
         jf.setMultiSelectionEnabled(true);
         int r = jf.showOpenDialog(null);
         if (r == JFileChooser.APPROVE_OPTION) {
