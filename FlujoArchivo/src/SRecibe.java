@@ -1,5 +1,7 @@
 import java.io.*;
 import java.net.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import javax.swing.JFileChooser;
 
 public class SRecibe {
@@ -32,9 +34,7 @@ for (;;) {
 
     if (solicitud.equals("SOLICITUD_ARCHIVO")) {
         enviarArchivoAlCliente(dos, RutaServidor, cl);
-    } else if (solicitud.equals("DIRECTORIO")) {
-        recibirDirectorio(dis, RutaServidor);
-    } else if (solicitud.equals("ARCHIVO")) {
+    }else if (solicitud.equals("ARCHIVO")) {
         recibirArchivoIndividual(dis, RutaServidor);
     } else if (solicitud.equals("LISTAR_CARPETA_SERVIDOR")) {
         listarDirectorioServidor(dos, RutaServidor);
@@ -114,24 +114,7 @@ for (;;) {
         dis.close();
     }
 
- private static void recibirDirectorio(DataInputStream dis, String Ruta_Archivo) {
-     try{
-    
-    String nombreDirectorio = dis.readUTF();
-    
-    int numArchivos = dis.readInt();
-    
-    // Crea la carpeta en el servidor
-    File directorioDestino = new File(Ruta_Archivo + "\\" + nombreDirectorio);
-    directorioDestino.mkdirs();
-
-    for (int i = 0; i < numArchivos; i++) {
-        recibirArchivoIndividual(dis, directorioDestino.getAbsolutePath());
-    }
-    }catch(IOException e){
-        e.printStackTrace();
-    }
-}
+      
 
 
     private static void recibirArchivoIndividual(DataInputStream dis, String directorioDestino) {

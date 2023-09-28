@@ -1,6 +1,8 @@
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import javax.swing.JFileChooser;
 
 public class CEnvia {
@@ -170,61 +172,28 @@ private static void listarArchivosInternos(DataInputStream dis, int numArchivos)
     
  
 
-public static void enviaArchivo(Socket cl, DataOutputStream dos, DataInputStream dis) { 
-    JFileChooser jf = new JFileChooser("C:\\Users\\Dell\\Downloads\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosDescargadosdelServidor\\archivosLocal");
-    
-    jf.setMultiSelectionEnabled(true);
-    jf.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES); // Permite seleccionar directorios
+   public static void enviaArchivo(Socket cl, DataOutputStream dos, DataInputStream dis) {
+        JFileChooser jf = new JFileChooser("C:\\Users\\Dell\\Downloads\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosDescargadosdelServidor\\archivosLocal");
+        jf.setMultiSelectionEnabled(true);
+        jf.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES); // Permite seleccionar directorios
 
-    int r = jf.showOpenDialog(null);
-    
+        int r = jf.showOpenDialog(null);
 
-    if (r == JFileChooser.APPROVE_OPTION) {
-        
-        File[] seleccionados = jf.getSelectedFiles();
-        for (File seleccionado : seleccionados) {
-            if (seleccionado.isDirectory()) {
-                // Si es un directorio, llama a un método para enviar el directorio y su contenido
-                enviarDirectorio(cl, seleccionado,dos, dis);
-            } else {
-                // Si es un archivo, envía el archivo individual
-                enviarArchivoIndividual(cl, seleccionado, dos);
+        if (r == JFileChooser.APPROVE_OPTION) {
+            File[] seleccionados = jf.getSelectedFiles();
+            for (File seleccionado : seleccionados) {
+                if (seleccionado.isDirectory()) {
+                    // Si es un directorio, comprime y envía la carpeta y su contenido
+                    
+                } else {
+                    // Si es un archivo, envía el archivo individual
+                    enviarArchivoIndividual(cl, seleccionado, dos);
+                }
             }
         }
     }
-    
-}
 
-private static void enviarDirectorio(Socket cl, File directorio, DataOutputStream dos, DataInputStream dis) {
-    try {
-        // Indica que se está enviando un directorio
-        dos.writeUTF("DIRECTORIO");
-        dos.flush();
-
-        dos.writeUTF(directorio.getName());
-        dos.flush();
-
-        File[] archivos = directorio.listFiles();
-
-        // Envía la cantidad de archivos en el directorio
-        dos.writeInt(archivos.length);
-        dos.flush();
-
-        for (File archivo : archivos) {
-            if (archivo.isDirectory()) {
-                // Si es un subdirectorio, llama recursivamente para enviarlo
-                enviarDirectorio(cl, archivo, dos, dis);
-            } else {
-                // Si es un archivo, envía el archivo individual
-                enviarArchivoIndividual(cl, archivo, dos);
-            }
-        }
-    } catch (IOException e) {
-        e.printStackTrace();
-    }
-}
-
-
+  
 
     private static void enviarArchivoIndividual(Socket cl, File archivo, DataOutputStream dos) {
         try{
