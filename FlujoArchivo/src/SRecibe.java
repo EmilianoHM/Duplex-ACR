@@ -31,7 +31,7 @@ for (;;) {
     String solicitud = dis.readUTF();
 
     if (solicitud.equals("SOLICITUD_ARCHIVO")) {
-        enviarArchivoAlCliente(RutaServidor, cl, dos, dis);
+        enviarArchivoAlCliente(dos, RutaServidor, cl);
     } else if (solicitud.equals("DIRECTORIO")) {
         recibirDirectorio(dis, RutaServidor);
     } else if (solicitud.equals("ARCHIVO")) {
@@ -62,77 +62,67 @@ for (;;) {
         }
     }
 
-    public static void enviarArchivoAlCliente(String Ruta_Archivo, Socket cl, DataOutputStream dos, DataInputStream dis){
+    public static void enviarArchivoAlCliente(DataOutputStream dos, String Ruta_Archivo, Socket cl) throws IOException {
         JFileChooser jf = new JFileChooser("C:\\Users\\Dell\\Downloads\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor");
         jf.setMultiSelectionEnabled(true);
         int r = jf.showOpenDialog(null);
         if (r == JFileChooser.APPROVE_OPTION) {
             File seleccionado = jf.getSelectedFile();
             if (seleccionado.isDirectory()) {
-                enviarDirectorio(cl, seleccionado, dos, dis);
+                enviarDirectorio(cl, seleccionado);
             } else {
-                enviarArchivoIndividual(cl, seleccionado, dos, dis);
+                enviarArchivoIndividual(cl, seleccionado);
             }
         }
     }
 
-    private static void enviarDirectorio(Socket cl, File directorio, DataOutputStream dos, DataInputStream dis)  {
-        try{
+    private static void enviarDirectorio(Socket cl, File directorio) throws IOException {
         File[] archivos = directorio.listFiles();
+        DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
 
         // Indica que se está enviando un directorio
         dos.writeUTF("DIRECTORIO");
-        dos.flush();
         dos.writeUTF(directorio.getName());
-        dos.flush();
 
         // Envía la cantidad de archivos en el directorio
         dos.writeInt(archivos.length);
-        dos.flush();
 
         for (File archivo : archivos) {
             if (archivo.isDirectory()) {
                 // Si es un subdirectorio, llama recursivamente para enviarlo
-                enviarDirectorio(cl, archivo, dos, dis);
+                enviarDirectorio(cl, archivo);
             } else {
                 // Si es un archivo, envía el archivo individual
-                enviarArchivoIndividual(cl, archivo, dos, dis);
+                enviarArchivoIndividual(cl, archivo);
             }
-        }
-        }catch(IOException e){
-            e.printStackTrace();
         }
     }
 
-    private static void enviarArchivoIndividual(Socket cl, File archivo, DataOutputStream dos,DataInputStream dis ){
-        try{
-            
-        
+    private static void enviarArchivoIndividual(Socket cl, File archivo) throws IOException {
+        DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
+        DataInputStream dis = new DataInputStream(new FileInputStream(archivo));
         dos.writeUTF("ARCHIVO");
-        dos.flush();
         dos.writeUTF(archivo.getName());
-        dos.flush();
         dos.writeLong(archivo.length());
-        dos.flush();
 
         byte[] buffer = new byte[1500];
         int bytesRead;
         while ((bytesRead = dis.read(buffer)) != -1) {
             dos.write(buffer, 0, bytesRead);
-            dos.flush();
         }
-        }catch(IOException e){
-            e.printStackTrace();
-        }
+
+        dis.close();
     }
 
  private static void recibirDirectorio(DataInputStream dis, String Ruta_Archivo) {
      try{
+    
     String nombreDirectorio = dis.readUTF();
+    
     int numArchivos = dis.readInt();
     
     // Crea la carpeta en el servidor
-    File directorioDestino = new File(Ruta_Archivo + File.separator + nombreDirectorio);
+    File directorioDestino = new File(Ruta_Archivo + "\\" + nombreDirectorio);
     directorioDestino.mkdirs();
 
     for (int i = 0; i < numArchivos; i++) {
@@ -146,11 +136,9 @@ for (;;) {
 
     private static void recibirArchivoIndividual(DataInputStream dis, String directorioDestino) {
         try{
-            
-        
         String nombre = dis.readUTF();
         long Dimension = dis.readLong();
-        FileOutputStream fos = new FileOutputStream(directorioDestino + File.separator + nombre);
+        FileOutputStream fos = new FileOutputStream(directorioDestino + "\\" + nombre);
         byte[] buffer = new byte[1500];
         int bytesRead;
         long recibidos = 0;

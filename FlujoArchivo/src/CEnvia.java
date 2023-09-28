@@ -24,14 +24,14 @@ public class CEnvia {
                 System.out.println("Menú:\n");
                 System.out.println("1) Ver carpeta local");
                 System.out.println("2) Ver carpeta remota");
-                System.out.println("3) Subir archivos/carpetas al servidor");
-                System.out.println("4) Descargar archivos/carpetas del servidor");
+                System.out.println("3) Subir archivos/carpetas al servidor");//falta poder pasar una carpeta con sus archivos
+                System.out.println("4) Descargar archivos/carpetas del servidor");//falta recibir multiples archivos y carpetas con archivos
                 System.out.println("5) Renombrar archivos/carpetas local");
                 System.out.println("6) Renombrar archivos/carpetas remota");
                 System.out.println("7) Eliminar archivos/carpetas local");
                 System.out.println("8) Eliminar archivos/carpetas remota");
                 System.out.println("9) Copiar archivos/carpetas");
-                System.out.println("10) Crear archivos/carpetas"); 
+                System.out.println("10) Crear carpetas"); 
                 System.out.println("0) Salir\n");
 
                 String respuesta = scanner.nextLine();
@@ -48,7 +48,7 @@ public class CEnvia {
                         enviaArchivo(cl, dos, dis);
                         break;
                     case 4:
-                        solicitarArchivoAlServidor(cl, rutaClienteLocal, dos, dis);
+                        solicitarArchivoAlServidor(cl, rutaClienteLocal);
                         break;
                     case 5:
                         renombrarArchivo(rutaClienteLocal);
@@ -66,7 +66,7 @@ public class CEnvia {
                     //9) Copiar archivos/carpetas
                     break;
                     case 10:
-                    //10) carpetas");
+                    //10) Crear carpetas");
                     break;
                     case 0:
                         System.out.println("\nFinalizando..");
@@ -192,35 +192,34 @@ public static void enviaArchivo(Socket cl, DataOutputStream dos, DataInputStream
 }
 
 private static void enviarDirectorio(Socket cl, File directorio, DataOutputStream dos, DataInputStream dis) {
-try{
-    // Indica que se está enviando un directorio
-    dos.writeUTF("DIRECTORIO");
-    dos.flush();
-    dos.writeUTF(directorio.getName());
-    dos.flush();
+    try {
+        // Indica que se está enviando un directorio
+        dos.writeUTF("DIRECTORIO");
+        dos.flush();
 
-    // Envía la cantidad de archivos en el directorio
-    
-    dos.writeInt(directorio.listFiles().length);
-    dos.flush();
+        dos.writeUTF(directorio.getName());
+        dos.flush();
 
-    // Crea la carpeta en el servidor
-    File carpetaServidor = new File("C:\\Users\\Dell\\Downloads\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor\\" + File.separator + directorio.getName());
-    carpetaServidor.mkdirs();
+        File[] archivos = directorio.listFiles();
 
-    for (File archivo : directorio.listFiles()) {
-        if (archivo.isDirectory()) {
-            // Si es un subdirectorio, llama recursivamente para enviarlo
-            enviarDirectorio(cl, archivo, dos, dis);
-        } else {
-            // Si es un archivo, envía el archivo individual
-            enviarArchivoIndividual(cl, archivo, dos);
+        // Envía la cantidad de archivos en el directorio
+        dos.writeInt(archivos.length);
+        dos.flush();
+
+        for (File archivo : archivos) {
+            if (archivo.isDirectory()) {
+                // Si es un subdirectorio, llama recursivamente para enviarlo
+                enviarDirectorio(cl, archivo, dos, dis);
+            } else {
+                // Si es un archivo, envía el archivo individual
+                enviarArchivoIndividual(cl, archivo, dos);
+            }
         }
-    }
-    }catch(IOException e){
+    } catch (IOException e) {
         e.printStackTrace();
     }
 }
+
 
 
     private static void enviarArchivoIndividual(Socket cl, File archivo, DataOutputStream dos) {
@@ -228,6 +227,7 @@ try{
         DataInputStream dis = new DataInputStream(new FileInputStream(archivo));
         dos.writeUTF("ARCHIVO");
         dos.flush();
+        
         dos.writeUTF(archivo.getName());
         dos.flush();
         dos.writeLong(archivo.length());
@@ -238,9 +238,7 @@ try{
         while ((bytesRead = dis.read(buffer)) != -1) {
             dos.write(buffer, 0, bytesRead);
             dos.flush();
-
         }
-
         //dis.close();
         }catch(IOException e){
             e.printStackTrace();
@@ -248,13 +246,14 @@ try{
     }
 
 
-    public static void solicitarArchivoAlServidor(Socket cl, String rutaClienteLocal,DataOutputStream dos, DataInputStream dis) {
+    
+    public static void solicitarArchivoAlServidor(Socket cl, String rutaClienteLocal) throws IOException {
         try {
-            
+            DataInputStream dis = new DataInputStream(cl.getInputStream());
+            DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
 
             // Envía una solicitud al servidor para obtener un archivo específico
             dos.writeUTF("SOLICITUD_ARCHIVO");
-            dos.flush();
 
             // Recibe el nombre del archivo desde el servidor
             String nombreArchivo = dis.readUTF();
@@ -269,7 +268,7 @@ try{
         }
     }
 
-    public static void recibirArchivoDelServidor(DataInputStream dis, String directorioDestino) {
+    public static void recibirArchivoDelServidor(DataInputStream dis, String directorioDestino) throws IOException {
         try {
             String nombre = dis.readUTF();
 
@@ -306,6 +305,8 @@ try{
             e.printStackTrace();
         }
     }
+    
+
 
  
     public static void renombrarArchivo(String rutaClienteLocal) {
