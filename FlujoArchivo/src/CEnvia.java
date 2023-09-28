@@ -7,7 +7,7 @@ import javax.swing.JFileChooser;
 
 public class CEnvia {
     public static void main(String[] args) {
-        final String rutaClienteLocal = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosDescargadosdelServidor\\archivosLocal\\";
+        final String rutaClienteLocal = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosLocal\\";
 
         try {
             int pto = 8000;
@@ -170,7 +170,7 @@ private static void listarArchivosInternos(DataInputStream dis, int numArchivos)
  
 
    public static void enviaArchivo(Socket cl, DataOutputStream dos, DataInputStream dis) {
-        JFileChooser jf = new JFileChooser("C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosDescargadosdelServidor\\archivosLocal");
+        JFileChooser jf = new JFileChooser("C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosLocal");
         jf.setMultiSelectionEnabled(true);
         jf.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES); // Permite seleccionar directorios
 
