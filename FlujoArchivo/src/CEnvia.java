@@ -31,7 +31,8 @@ public class CEnvia {
                 System.out.println("7) Eliminar archivos/carpetas local");
                 System.out.println("8) Eliminar archivos/carpetas remota");
                 System.out.println("9) Copiar archivos/carpetas");
-                System.out.println("10) Crear carpetas"); 
+                System.out.println("10) Crear carpetas en local"); 
+                System.out.println("11) Crear carpetas en remoto"); 
                 System.out.println("0) Salir\n");
 
                 String respuesta = scanner.nextLine();
@@ -66,7 +67,10 @@ public class CEnvia {
                     //9) Copiar archivos/carpetas
                     break;
                     case 10:
-                    //10) Crear carpetas");
+                        crearCarpetaLocal(rutaClienteLocal);
+                    break;
+                    case 11:
+                        crearCarpetaServidor(cl, dos, dis);
                     break;
                     case 0:
                         System.out.println("\nFinalizando..");
@@ -461,7 +465,51 @@ public static void eliminarElementoServidor(Socket cl, DataOutputStream dos, Dat
     }
 }
 
-    
+
+public static void crearCarpetaLocal(String rutaClienteLocal) {
+    Scanner scanner = new Scanner(System.in);
+    System.out.print("Ingrese la ruta relativa de la carpeta a crear (incluyendo subcarpetas, ej: carpeta1/carpeta2): ");
+    String rutaRelativa = scanner.nextLine();
+
+    File nuevaCarpeta = new File(rutaClienteLocal + File.separator + rutaRelativa);
+
+    if (nuevaCarpeta.mkdirs()) {
+        System.out.println("Carpeta creada con éxito en " + nuevaCarpeta.getAbsolutePath());
+    } else {
+        System.out.println("No se pudo crear la carpeta.");
+    }
+}
+
+
+ public static void crearCarpetaServidor(Socket cl, DataOutputStream dos, DataInputStream dis) {
+    try {
+        dos.writeUTF("CREAR_CARPETA_SERVIDOR");
+        dos.flush();
+
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Ingrese la ruta completa de la carpeta a crear en el servidor (puedes incluir subdirectorios): ");
+        String rutaCarpeta = scanner.nextLine();
+
+        // Envía la ruta de la carpeta al servidor
+        dos.writeUTF(rutaCarpeta);
+        dos.flush();
+
+        // Recibe la respuesta del servidor
+        String respuesta = dis.readUTF();
+
+        if (respuesta.equals("CARPETA_CREADA")) {
+            System.out.println("Carpeta creada con éxito en el servidor.");
+        } else if (respuesta.equals("ERROR_CREAR_CARPETA")) {
+            System.out.println("No se pudo crear la carpeta en el servidor.");
+        } else {
+            System.out.println("Respuesta desconocida del servidor: " + respuesta);
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+
+
     
 
 }

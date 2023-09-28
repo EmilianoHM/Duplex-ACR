@@ -42,11 +42,11 @@ for (;;) {
         eliminarElemento(dos, dis, RutaServidor);
     } else if (solicitud.equals("RENOMBRAR_ARCHIVO_CARPETA")) {
         renombrarArchivoOCarpeta(dos, dis, RutaServidor);
-    }
-     else if (solicitud.equals("FINALIZAR_CLIENTE")) {
+    } else if (solicitud.equals("FINALIZAR_CLIENTE")) {
         break label;
-    }    
-    else{
+    } else if (solicitud.equals("CREAR_CARPETA_SERVIDOR")) {
+        crearCarpetaEnServidor(dos, dis, RutaServidor);
+    }else{
         System.out.println("Solicitud no válida.");
     }
     
@@ -301,6 +301,25 @@ private static void renombrarArchivoOCarpeta(DataOutputStream dos, DataInputStre
 
         return elemento.delete();
     }
+
+private static void crearCarpetaEnServidor(DataOutputStream dos, DataInputStream dis, String rutaServidor) {
+    try {
+        String rutaCarpeta = dis.readUTF();
+        File nuevaCarpeta = new File(rutaServidor + File.separator + rutaCarpeta);
+
+        if (nuevaCarpeta.mkdirs()) { // Utiliza mkdirs() para crear subdirectorios si es necesario
+            dos.writeUTF("CARPETA_CREADA");
+            dos.flush();
+            System.out.println("Carpeta creada con éxito en el servidor: " + nuevaCarpeta.getAbsolutePath());
+        } else {
+            dos.writeUTF("ERROR_CREAR_CARPETA");
+            dos.flush();
+            System.out.println("No se pudo crear la carpeta en el servidor.");
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
 
 
     
