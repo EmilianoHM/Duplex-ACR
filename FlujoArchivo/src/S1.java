@@ -34,7 +34,7 @@ public class S1 {
               DataInputStream dis = new DataInputStream(cl.getInputStream());
               DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
               
-              String rutaLocal=rutaRemota;
+              //String rutaLocal=rutaRemota;
               
               
              /* dos.writeUTF(rutaCliente);
