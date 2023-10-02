@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 import javax.swing.JFileChooser;
 
 public class SRecibe {
@@ -36,6 +37,10 @@ for (;;) {
         enviarArchivoAlCliente(dos, RutaServidor, cl);
     }else if (solicitud.equals("ARCHIVO")) {
         recibirArchivoIndividual(dis, RutaServidor);
+    }else if (solicitud.equals("SOLICITUD_CARPETA")) {
+        enviarArchivoAlCliente(dos, RutaServidor, cl);
+    }else if (solicitud.equals("CARPETA")) {
+        recibirCarpeta(dis, RutaServidor, cl); 
     } else if (solicitud.equals("LISTAR_CARPETA_SERVIDOR")) {
         listarDirectorioServidor(dos, RutaServidor);
     } else if (solicitud.equals("ELIMINAR_ELEMENTO")) {
@@ -65,6 +70,7 @@ for (;;) {
     public static void enviarArchivoAlCliente(DataOutputStream dos, String Ruta_Archivo, Socket cl) throws IOException {
         JFileChooser jf = new JFileChooser("C:\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor");
         jf.setMultiSelectionEnabled(true);
+        jf.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES); // Permite seleccionar directorios
         int r = jf.showOpenDialog(null);
         if (r == JFileChooser.APPROVE_OPTION) {
             File seleccionado = jf.getSelectedFile();
@@ -77,23 +83,36 @@ for (;;) {
     }
 
     private static void enviarDirectorio(Socket cl, File directorio) throws IOException {
-        File[] archivos = directorio.listFiles();
-        DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
+        String sourceFolder = directorio.getAbsolutePath();
+        String zipFilePath = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor\\archivo.zip";
+        FileOutputStream fos = new FileOutputStream(zipFilePath);
+        ZipOutputStream zipOut = new ZipOutputStream(fos);
+        File folderToCompress = new File(sourceFolder);
+        zipFolder(folderToCompress, folderToCompress.getName(), zipOut);
+        zipOut.close();
+        System.out.println("Carpeta comprimida exitosamente en " + zipFilePath);
+        File folder = new File(zipFilePath);
+        enviarArchivoIndividual(cl, folder);
+        folder.delete();
+    }
+    
+    private static void zipFolder(File folderToZip, String baseName, ZipOutputStream zipOut) throws IOException {
+        File[] files = folderToZip.listFiles();
+        byte[] buffer = new byte[1024];
 
-        // Indica que se está enviando un directorio
-        dos.writeUTF("DIRECTORIO");
-        dos.writeUTF(directorio.getName());
-
-        // Envía la cantidad de archivos en el directorio
-        dos.writeInt(archivos.length);
-
-        for (File archivo : archivos) {
-            if (archivo.isDirectory()) {
-                // Si es un subdirectorio, llama recursivamente para enviarlo
-                enviarDirectorio(cl, archivo);
+        for (File file : files) {
+            if (file.isDirectory()) {
+                zipFolder(file, baseName + "/" + file.getName(), zipOut);
             } else {
-                // Si es un archivo, envía el archivo individual
-                enviarArchivoIndividual(cl, archivo);
+                FileInputStream fis = new FileInputStream(file);
+                zipOut.putNextEntry(new ZipEntry(baseName + "/" + file.getName()));
+
+                int length;
+                while ((length = fis.read(buffer)) > 0) {
+                    zipOut.write(buffer, 0, length);
+                }
+
+                fis.close();
             }
         }
     }
@@ -113,9 +132,6 @@ for (;;) {
 
         dis.close();
     }
-
-      
-
 
     private static void recibirArchivoIndividual(DataInputStream dis, String directorioDestino) {
         try{
@@ -139,6 +155,64 @@ for (;;) {
         }
     }
     
+    private static void enviarCarpeta(DataInputStream dis, String directorioDestino) {
+        try{
+        String nombre = dis.readUTF();
+        long Dimension = dis.readLong();
+        FileOutputStream fos = new FileOutputStream(directorioDestino + "\\" + nombre);
+        byte[] buffer = new byte[1500];
+        int bytesRead;
+        long recibidos = 0;
+
+        while (recibidos < Dimension) {
+            bytesRead = dis.read(buffer);
+            fos.write(buffer, 0, bytesRead);
+            recibidos += bytesRead;
+        }
+
+        fos.close();
+        System.out.println("Archivo " + nombre + " recibido y guardado en " + directorioDestino);
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+    }
+    
+    private static void recibirCarpeta(DataInputStream dis, String directorioDestino, Socket cl) {
+        try {
+        String zipFile = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor\\archivo.zip";
+        String destDir = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor";
+        File dir = new File(destDir);
+        // create output directory if it doesn't exist
+        if(!dir.exists()) dir.mkdirs();
+        // buffer for read and write data to file
+        byte[] buffer = new byte[1024];
+        ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile));
+        ZipEntry ze = zis.getNextEntry();
+        while(ze != null){
+            String fileName = ze.getName();
+            File newFile = new File(destDir + File.separator + fileName);
+            System.out.println("file unzip : "+ newFile.getAbsoluteFile());
+            // create all non exists folders
+            // else you will hit FileNotFoundException for compressed folder
+            new File(newFile.getParent()).mkdirs();
+            FileOutputStream fos = new FileOutputStream(newFile);
+            int len;
+            while ((len = zis.read(buffer)) > 0) {
+                fos.write(buffer, 0, len);
+            }
+            fos.close();
+            // close this ZipEntry
+            zis.closeEntry();
+            ze = zis.getNextEntry();
+        }
+            // close last ZipEntry
+            zis.closeEntry();
+            zis.close();
+            System.out.println("Carpeta ZIP descomprimida exitosamente en " + destDir);
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+    }
     
 private static void listarDirectorioServidor(DataOutputStream dos, String rutaServidor) {
     try{

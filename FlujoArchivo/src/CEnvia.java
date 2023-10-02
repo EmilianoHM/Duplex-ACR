@@ -3,6 +3,7 @@ import java.net.*;
 import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import java.util.zip.ZipInputStream;
 import javax.swing.JFileChooser;
 
 public class CEnvia {
@@ -32,9 +33,8 @@ public class CEnvia {
                 System.out.println("6) Renombrar archivos/carpetas remota");
                 System.out.println("7) Eliminar archivos/carpetas local");
                 System.out.println("8) Eliminar archivos/carpetas remota");
-                System.out.println("9) Copiar archivos/carpetas");
-                System.out.println("10) Crear carpetas en local"); 
-                System.out.println("11) Crear carpetas en remoto"); 
+                System.out.println("9) Crear carpetas en local"); 
+                System.out.println("10) Crear carpetas en remoto"); 
                 System.out.println("0) Salir\n");
 
                 String respuesta = scanner.nextLine();
@@ -170,6 +170,7 @@ private static void listarArchivosInternos(DataInputStream dis, int numArchivos)
  
 
    public static void enviaArchivo(Socket cl, DataOutputStream dos, DataInputStream dis) {
+       try{
         JFileChooser jf = new JFileChooser("C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosLocal");
         jf.setMultiSelectionEnabled(true);
         jf.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES); // Permite seleccionar directorios
@@ -180,16 +181,50 @@ private static void listarArchivosInternos(DataInputStream dis, int numArchivos)
             File[] seleccionados = jf.getSelectedFiles();
             for (File seleccionado : seleccionados) {
                 if (seleccionado.isDirectory()) {
-                    // Si es un directorio, comprime y envía la carpeta y su contenido
-                    
+                    String sourceFolder = seleccionado.getAbsolutePath();
+                    String zipFilePath = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosLocal\\archivo.zip";
+                    FileOutputStream fos = new FileOutputStream(zipFilePath);
+                    ZipOutputStream zipOut = new ZipOutputStream(fos);
+                    File folderToCompress = new File(sourceFolder);
+                    zipFolder(folderToCompress, folderToCompress.getName(), zipOut);
+                    zipOut.close();
+                    System.out.println("Carpeta comprimida exitosamente en " + zipFilePath);
+                    File folder = new File(zipFilePath);
+                    enviarArchivoIndividual(cl, folder, dos);
+                    folder.delete();
+                    dos.writeUTF("CARPETA");
+                    dos.flush();
                 } else {
                     // Si es un archivo, envía el archivo individual
                     enviarArchivoIndividual(cl, seleccionado, dos);
                 }
             }
         }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
+   
+    private static void zipFolder(File folderToZip, String baseName, ZipOutputStream zipOut) throws IOException {
+        File[] files = folderToZip.listFiles();
+        byte[] buffer = new byte[1024];
 
+        for (File file : files) {
+            if (file.isDirectory()) {
+                zipFolder(file, baseName + "/" + file.getName(), zipOut);
+            } else {
+                FileInputStream fis = new FileInputStream(file);
+                zipOut.putNextEntry(new ZipEntry(baseName + "/" + file.getName()));
+
+                int length;
+                while ((length = fis.read(buffer)) > 0) {
+                    zipOut.write(buffer, 0, length);
+                }
+
+                fis.close();
+            }
+        }
+    }
   
 
     private static void enviarArchivoIndividual(Socket cl, File archivo, DataOutputStream dos) {
@@ -209,7 +244,7 @@ private static void listarArchivosInternos(DataInputStream dis, int numArchivos)
             dos.write(buffer, 0, bytesRead);
             dos.flush();
         }
-        //dis.close();
+        dis.close();
         }catch(IOException e){
             e.printStackTrace();
         }
@@ -269,6 +304,41 @@ private static void listarArchivosInternos(DataInputStream dis, int numArchivos)
 
                 fos.close();
                 System.out.println("\nArchivo " + nombre + " recibido y guardado en " + directorioDestino);
+                
+                if(nombre.endsWith(".zip")){
+                    String zipFile = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosLocal\\archivo.zip";
+                    String destDir = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosLocal";
+                    File dir = new File(destDir);
+                    // create output directory if it doesn't exist
+                    if(!dir.exists()) dir.mkdirs();
+                    // buffer for read and write data to file
+                    byte[] buffer1 = new byte[1024];
+                    ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile));
+                    ZipEntry ze = zis.getNextEntry();
+                    while(ze != null){
+                        String fileName = ze.getName();
+                        File newFile = new File(destDir + File.separator + fileName);
+                        System.out.println("file unzip : "+ newFile.getAbsoluteFile());
+                        // create all non exists folders
+                        // else you will hit FileNotFoundException for compressed folder
+                        new File(newFile.getParent()).mkdirs();
+                        FileOutputStream fos1 = new FileOutputStream(newFile);
+                        int len;
+                        while ((len = zis.read(buffer)) > 0) {
+                            fos1.write(buffer, 0, len);
+                        }
+                        fos1.close();
+                        // close this ZipEntry
+                        zis.closeEntry();
+                        ze = zis.getNextEntry();
+                    }
+                        // close last ZipEntry
+                        zis.closeEntry();
+                        zis.close();
+                        File folder = new File(zipFile);
+                        folder.delete();
+                        System.out.println("Carpeta ZIP descomprimida exitosamente en " + destDir);
+                }
             }
 
         } catch (IOException e) {
