@@ -1,10 +1,7 @@
-
 import java.io.*;
 import java.net.*;
+import java.util.Arrays;
 import java.util.Scanner;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
-import java.util.zip.ZipInputStream;
 import javax.swing.JFileChooser;
 
 public class CEnvia {
@@ -13,22 +10,22 @@ public class CEnvia {
         final String rutaClienteLocal = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosLocal\\";
 
         try {
-            int pto = 8000;
-            String dir = "127.0.0.1";
-            Socket cl = new Socket(dir, pto);
-            System.out.println("Conexion con servidor establecida...");
+            int puerto = 8000;
+            InetAddress servidorAddress = InetAddress.getByName("127.0.0.1");
+            DatagramSocket socket = new DatagramSocket();
+
+            System.out.println("Conexión con el servidor establecida...");
 
             File f2 = new File(rutaClienteLocal);
             f2.mkdirs();
             f2.setWritable(true);
-            DataInputStream dis = new DataInputStream(cl.getInputStream());
-            DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
 
             Scanner scanner = new Scanner(System.in);
+
             while (true) {
                 System.out.println("Menú:\n");
-                System.out.println("1) Subir archivos/carpetas al servidor");//falta poder pasar una carpeta con sus archivos
-                System.out.println("2) Descargar archivos/carpetas del servidor");//falta recibir multiples archivos y carpetas con archivos
+                System.out.println("1) Subir archivos/carpetas al servidor");
+                System.out.println("2) Descargar archivos/carpetas del servidor");
                 System.out.println("0) Salir\n");
 
                 String respuesta = scanner.nextLine();
@@ -36,165 +33,154 @@ public class CEnvia {
 
                 switch (resp) {
                     case 1:
-                        enviaArchivo(cl, dos, dis);
+                        enviaArchivo(socket, servidorAddress, puerto);
                         break;
                     case 2:
-                        solicitarArchivoAlServidor(cl, rutaClienteLocal);
+                        solicitarArchivoAlServidor(socket, servidorAddress, puerto, rutaClienteLocal);
                         break;
                     case 0:
                         System.out.println("\nFinalizando..");
-                        dos.writeUTF("FINALIZAR_CLIENTE");
                         System.exit(0);
                     default:
                         System.out.println("Opción no válida.");
                         break;
                 }
             }
-
         } catch (IOException | NumberFormatException e) {
             e.printStackTrace();
         }
     }
 
+    public static void enviaArchivo(DatagramSocket socket, InetAddress servidorAddress, int puerto) {
+        try {
+            JFileChooser jf = new JFileChooser("C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosLocal");
+            jf.setMultiSelectionEnabled(true);
+            jf.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 
+            int r = jf.showOpenDialog(null);
 
-public static void enviaArchivo(Socket cl, DataOutputStream dos, DataInputStream dis) {
+            if (r == JFileChooser.APPROVE_OPTION) {
+                File[] seleccionados = jf.getSelectedFiles();
+                for (File seleccionado : seleccionados) {
+                    enviarArchivoIndividual(socket, servidorAddress, puerto, seleccionado);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+public static void enviarArchivoIndividual(DatagramSocket socket, InetAddress servidorAddress, int puerto, File archivo) {
     try {
-        JFileChooser jf = new JFileChooser("C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosLocal");
-        jf.setMultiSelectionEnabled(true);
-        jf.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES); // Permite seleccionar directorios
+        byte[] buffer = new byte[65535];
+        int bytesRead;
 
-        int r = jf.showOpenDialog(null);
+        // Enviar solicitud de envío al servidor
+        String nombreArchivo = archivo.getName();
+        long fileSize = archivo.length();
+        String solicitud = "ARCHIVO " + nombreArchivo + " " + fileSize;
+        byte[] solicitudBytes = solicitud.getBytes();
+        DatagramPacket requestPacket = new DatagramPacket(solicitudBytes, solicitudBytes.length, servidorAddress, puerto);
+        socket.send(requestPacket);
 
-        if (r == JFileChooser.APPROVE_OPTION) {
-            File[] seleccionados = jf.getSelectedFiles();
-            for (File seleccionado : seleccionados) {
-                    // Si es un archivo, envía el archivo individual
-                    enviarArchivoIndividual(cl, seleccionado, dos);
+        try (DataInputStream dis = new DataInputStream(new FileInputStream(archivo))) {
+            while ((bytesRead = dis.read(buffer)) != -1) {
+                DatagramPacket dataPacket = new DatagramPacket(buffer, bytesRead, servidorAddress, puerto);
+                socket.send(dataPacket);
             }
         }
-    } catch (Exception e) {
+    } catch (IOException e) {
         e.printStackTrace();
     }
 }
 
 
-    private static void enviarArchivoIndividual(Socket cl, File archivo, DataOutputStream dos) {
-        try {
-            DataInputStream dis = new DataInputStream(new FileInputStream(archivo));
-            dos.writeUTF("ARCHIVO");
-            dos.flush();
+ public static void solicitarArchivoAlServidor(DatagramSocket socket, InetAddress servidorAddress, int puerto, String rutaClienteLocal) {
+    try {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Ingrese el nombre del archivo a recibir: ");
+        String nombre = scanner.nextLine();
 
-            dos.writeUTF(archivo.getName());
-            dos.flush();
-            dos.writeLong(archivo.length());
-            dos.flush();
-            System.out.println("Preparandose para enviar el archivo: " + archivo.getName());
-            byte[] buffer = new byte[1500];
-            int bytesRead;
-            while ((bytesRead = dis.read(buffer)) != -1) {
-                dos.write(buffer, 0, bytesRead);
-                dos.flush();
-            }
-            dis.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+        // Enviar solicitud al servidor        
+        String tipoSolicitud = "SOLICITUD_ARCHIVO";
+        String nombreArchivo = nombre;
+
+        byte[] tipoSolicitudBytes = tipoSolicitud.getBytes();
+        byte[] nombreArchivoBytes = nombreArchivo.getBytes();
+
+        byte[] solicitudBytes = new byte[tipoSolicitudBytes.length + 1 + nombreArchivoBytes.length];
+        System.arraycopy(tipoSolicitudBytes, 0, solicitudBytes, 0, tipoSolicitudBytes.length);
+        solicitudBytes[tipoSolicitudBytes.length] = ' '; // Agrega un espacio
+        System.arraycopy(nombreArchivoBytes, 0, solicitudBytes, tipoSolicitudBytes.length + 1, nombreArchivoBytes.length);
+
+        DatagramPacket requestPacket = new DatagramPacket(solicitudBytes, solicitudBytes.length, servidorAddress, puerto);
+        socket.send(requestPacket);
+
+
+        byte[] buffer = new byte[65535];
+        DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
+        socket.receive(receivePacket);
+
+        String respuesta = new String(receivePacket.getData(), 0, receivePacket.getLength());
+        System.out.println("La respuesta que se envió desde SRecibe es: "+respuesta);
+        if (respuesta.equals("ARCHIVO_DISPONIBLE")) {
+            // Ahora sabes que el archivo está disponible y puedes proceder a recibirlo
+            System.out.println("si entro a ARCHIVO_DISPONIBLE");
+            recibirArchivoDelServidor(socket, rutaClienteLocal, nombre);
+        } else if (respuesta.equals("ARCHIVO_NO_ENCONTRADO")) {
+            System.out.println("El archivo solicitado no se encontró en el servidor.");
+        } else {
+            System.out.println("Respuesta no válida.");
         }
+
+    } catch (IOException e) {
+        e.printStackTrace();
     }
+}
 
-    public static void solicitarArchivoAlServidor(Socket cl, String rutaClienteLocal) throws IOException {
-        try {
-            DataInputStream dis = new DataInputStream(cl.getInputStream());
-            DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
 
-            // Envía una solicitud al servidor para obtener un archivo específico
-            dos.writeUTF("SOLICITUD_ARCHIVO");
+public static void recibirArchivoDelServidor(DatagramSocket socket, String rutaClienteLocal, String nombre) {
+    try {
+        byte[] buffer = new byte[65535];
+        DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
+        socket.receive(receivePacket);
 
-            System.out.print("Ingrese el nombre del archivo a enviar: ");
+        String nombreArchivo = new String(receivePacket.getData(), 0, receivePacket.getLength());
 
-            Scanner scanner = new Scanner(System.in);
-            String nombre = scanner.nextLine();
-            dos.writeUTF(nombre);
+        if (nombreArchivo.equals("ARCHIVO_NO_ENCONTRADO")) {
+            System.out.println("El archivo solicitado no se encontró en el servidor.");
+        } else {
+            File archivoDestino = new File(rutaClienteLocal, nombre);
+            FileOutputStream fos = new FileOutputStream(archivoDestino);
 
-            // Recibe el nombre del archivo desde el servidor
-            String nombreArchivo = dis.readUTF();
+            while (true) {
+                socket.receive(receivePacket);
+                int bytesRead = receivePacket.getLength();
 
-            if (nombreArchivo.equals("ARCHIVO_NO_ENCONTRADO")) {
-                System.out.println("El archivo solicitado no se encontró en el servidor.");
-            } else {
-                recibirArchivoDelServidor(dis, rutaClienteLocal);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void recibirArchivoDelServidor(DataInputStream dis, String directorioDestino) throws IOException {
-        try {
-            String nombre = dis.readUTF();
-
-            if (nombre.equals("ARCHIVO_NO_ENCONTRADO")) {
-                System.out.println("El archivo solicitado no se encontró en el servidor.");
-            } else {
-                long Dimension = dis.readLong();
-                System.out.println("Comienza descarga del archivo " + nombre + " de " + Dimension + " bytes\n\n");
-
-                File directorio = new File(directorioDestino);
-                if (!directorio.exists()) {
-                    directorio.mkdirs();
+                if (bytesRead <= 0) {
+                    // Paquete vacío, fin de la transmisión
+                    break;
                 }
 
-                FileOutputStream fos = new FileOutputStream(directorioDestino + File.separator + nombre);
-                byte[] buffer = new byte[1500];
-                int bytesRead;
-                long recibidos = 0;
-                int porcentaje = 0;
-
-                while (recibidos < Dimension) {
-                    bytesRead = dis.read(buffer);
-                    fos.write(buffer, 0, bytesRead);
-                    recibidos += bytesRead;
-                    porcentaje = (int) ((recibidos * 100) / Dimension);
-                    System.out.print("\rRecibido el " + porcentaje + " % del archivo");
-                }
-
-                fos.close();
-                System.out.println("\nArchivo " + nombre + " recibido y guardado en " + directorioDestino);
-
-                if (nombre.endsWith(".zip")) {
-                    String zipFile = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosLocal\\archivo.zip";
-                    String destDir = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\src\\archivosLocal";
-                    File dir = new File(destDir);
-                    if (!dir.exists()) {
-                        dir.mkdirs();
-                    }
-                    byte[] buffer1 = new byte[1024];
-                    ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile));
-                    ZipEntry ze = zis.getNextEntry();
-                    while (ze != null) {
-                        String fileName = ze.getName();
-                        File newFile = new File(destDir + File.separator + fileName);
-                        System.out.println("file unzip : " + newFile.getAbsoluteFile());
-                        new File(newFile.getParent()).mkdirs();
-                        FileOutputStream fos1 = new FileOutputStream(newFile);
-                        int len;
-                        while ((len = zis.read(buffer)) > 0) {
-                            fos1.write(buffer, 0, len);
-                        }
-                        fos1.close();
-                        zis.closeEntry();
-                        ze = zis.getNextEntry();
-                    }
-                    zis.closeEntry();
-                    zis.close();
-                    File folder = new File(zipFile);
-                    folder.delete();
-                    System.out.println("Carpeta ZIP descomprimida exitosamente en " + destDir);
-                }
+                fos.write(buffer, 0, bytesRead);
             }
 
-        } catch (IOException e) {
-            e.printStackTrace();
+            fos.close();
+            System.out.println("Archivo " + nombreArchivo + " recibido y guardado en " + rutaClienteLocal);
         }
+    } catch (IOException e) {
+        e.printStackTrace();
     }
+}
+
+
+
+
+
+ 
+ 
+ 
+ 
+ 
+
 }

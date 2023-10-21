@@ -1,4 +1,3 @@
-
 import java.io.*;
 import java.net.*;
 import java.util.zip.ZipEntry;
@@ -12,9 +11,8 @@ public class SRecibe {
         final String RutaServidor = "C:\\FlujoArchivo_modificado\\FlujoArchivo\\archivosServidor\\";
 
         try {
-            int pto = 8000;
-            ServerSocket s = new ServerSocket(pto);
-            s.setReuseAddress(true);
+            int puerto = 8000;
+            DatagramSocket socket = new DatagramSocket(puerto);
             System.out.println("Servidor iniciado esperando por archivos...");
 
             System.out.println("ruta:" + RutaServidor);
@@ -22,98 +20,119 @@ public class SRecibe {
             f2.mkdirs();
             f2.setWritable(true);
 
-            for (;;) {
-                Socket cl = s.accept();
-                System.out.println("Cliente conectado desde " + cl.getInetAddress() + ":" + cl.getPort());
+            while (true) {
+                byte[] receiveData = new byte[65535];
+                DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                socket.receive(receivePacket);
 
-                DataInputStream dis = new DataInputStream(cl.getInputStream());
-                DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
+                //String solicitud = new String(receivePacket.getData(), 0, receivePacket.getLength());
 
-                label:
-                while (true) {
+                InetAddress clientAddress = receivePacket.getAddress();
+                System.out.println("La dirección del cliente en teoría desde SRecibe es: "+clientAddress);
+                int clientPort = receivePacket.getPort();
 
-                    String solicitud = dis.readUTF();
-
-                    if (solicitud.equals("SOLICITUD_ARCHIVO")) {
-                        enviarArchivoAlCliente(dos, RutaServidor, cl);
-                    } else if (solicitud.equals("ARCHIVO")) {
-                        recibirArchivoIndividual(dis, RutaServidor);
-                    } else if (solicitud.equals("FINALIZAR_CLIENTE")) {
-                        break label;
+                String solicitud = new String(receivePacket.getData(), 0, receivePacket.getLength());
+                String[] parts = solicitud.split(" ");
+                System.out.println("\n\n\n la solicitud recibida sin separar es: "+solicitud);
+                if (parts.length == 2) {
+                    String tipoSolicitud = parts[0];
+                    String nombreArchivo = parts[1];
+                    System.out.println("\n\n\n la solicitud recibida ya separada es: "+tipoSolicitud);
+                    System.out.println("\n\n\n El nombreArchivo recibido ya separada es: "+nombreArchivo);
+                    if (tipoSolicitud.equals("SOLICITUD_ARCHIVO")) {
+                        enviarArchivoAlCliente(RutaServidor, clientAddress, clientPort, socket, nombreArchivo);
+                    } else if (tipoSolicitud.equals("ARCHIVO")) {
+                        recibirArchivoIndividual(socket, RutaServidor, nombreArchivo);
+                    } else if (tipoSolicitud.equals("FINALIZAR_CLIENTE")) {
+                        break;
                     } else {
                         System.out.println("Solicitud no válida.");
                     }
-
+                } else {
+                    System.out.println("Solicitud mal formateada.");
                 }
 
-                dis.close();
-                dos.close();
-                cl.close();
-            }
 
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static void enviarArchivoAlCliente(DataOutputStream dos, String Ruta_Archivo, Socket cl) throws IOException {
-        DataInputStream dis = new DataInputStream(cl.getInputStream());
-
-        String nombreArchivo = dis.readUTF();
+    public static void enviarArchivoAlCliente(String Ruta_Archivo, InetAddress clientAddress, int clientPort, DatagramSocket socket, String nombreArchivo) throws IOException {
         File archivo = new File(Ruta_Archivo, nombreArchivo);
         if (archivo.exists()) {
-                enviarArchivoIndividual(cl, archivo);
+            // Enviar una respuesta al cliente en CEnvia para indicar que el archivo está disponible
+            String respuesta = "ARCHIVO_DISPONIBLE";
+            byte[] respuestaBytes = respuesta.getBytes();
+            DatagramPacket respuestaPacket = new DatagramPacket(respuestaBytes, respuestaBytes.length, clientAddress, clientPort);
+            socket.send(respuestaPacket);
+            enviarArchivoIndividual(socket, archivo, clientAddress, clientPort);
         } else {
+            
             System.out.println("El archivo especificado no existe en la ubicación proporcionada.");
         }
     }
 
 
-private static void enviarArchivoIndividual(Socket cl, File archivo) throws IOException {
-    DataOutputStream dos = new DataOutputStream(cl.getOutputStream());
-    DataInputStream dis = new DataInputStream(new FileInputStream(archivo));
-    dos.writeUTF("ARCHIVO");
-    dos.writeUTF(archivo.getName());
-    dos.writeLong(archivo.length());
 
-    byte[] buffer = new byte[1500];
-    int bytesRead;
-    long totalBytesSent = 0; 
-    long fileSize = archivo.length(); 
+private static void enviarArchivoIndividual(DatagramSocket socket, File archivo, InetAddress clientAddress, int clientPort) {
+    try (DataInputStream dis = new DataInputStream(new FileInputStream(archivo))) {
+        byte[] buffer = new byte[65535];
+        int bytesRead;
+        long totalBytesSent = 0;
+        long fileSize = archivo.length();
 
-    while ((bytesRead = dis.read(buffer)) != -1) {
-        dos.write(buffer, 0, bytesRead);
-        totalBytesSent += bytesRead;
+        DatagramPacket packet;
 
-        // Calcular el porcentaje y mostrarlo
-        double porcentajeEnviado = ((double) totalBytesSent / fileSize) * 100;
-        System.out.printf("\rBytes enviados: %d / %d (%.2f%%)", totalBytesSent, fileSize, porcentajeEnviado);
+        while ((bytesRead = dis.read(buffer)) != -1) {
+            packet = new DatagramPacket(buffer, 0, bytesRead, clientAddress, clientPort);
+            socket.send(packet);
+            totalBytesSent += bytesRead;
+
+            // Calcular el porcentaje y mostrarlo
+            double porcentajeEnviado = ((double) totalBytesSent / fileSize) * 100;
+            System.out.printf("\rBytes enviados: %d / %d (%.2f%%)", totalBytesSent, fileSize, porcentajeEnviado);
+        }
+
+        // Envía un paquete vacío para indicar el final de la transmisión
+        packet = new DatagramPacket(new byte[0], 0, clientAddress, clientPort);
+        socket.send(packet);
+
+        System.out.println("\nEnvío de archivo completado.");
+    } catch (IOException e) {
+        e.printStackTrace();
     }
-
-    dis.close();
-    System.out.println("\nEnvío de archivo completado.");
 }
 
 
-    private static void recibirArchivoIndividual(DataInputStream dis, String directorioDestino) {
-        try {
-            String nombre = dis.readUTF();
-            long Dimension = dis.readLong();
-            FileOutputStream fos = new FileOutputStream(directorioDestino + "\\" + nombre);
-            byte[] buffer = new byte[1500];
-            int bytesRead;
-            long recibidos = 0;
+private static void recibirArchivoIndividual(DatagramSocket socket, String directorioDestino, String nombreArchivo) {
+    try {
+        byte[] buffer = new byte[65535];
+        DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
+        socket.receive(receivePacket);
 
-            while (recibidos < Dimension) {
-                bytesRead = dis.read(buffer);
+        if (nombreArchivo.equals("ARCHIVO_NO_ENCONTRADO")) {
+            System.out.println("El archivo solicitado no se encontró en el servidor.");
+        } else {
+            File archivoDestino = new File(directorioDestino, nombreArchivo);
+            FileOutputStream fos = new FileOutputStream(archivoDestino);
+
+            while (true) {
+                socket.receive(receivePacket);
+                int bytesRead = receivePacket.getLength();
+
+                if (bytesRead <= 0) {
+                    break; // Fin de la transmisión
+                }
                 fos.write(buffer, 0, bytesRead);
-                recibidos += bytesRead;
             }
-
             fos.close();
-            System.out.println("Archivo " + nombre + " recibido y guardado en " + directorioDestino);
-        } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Archivo " + nombreArchivo + " recibido y guardado en " + directorioDestino);
         }
+    } catch (IOException e) {
+        e.printStackTrace();
     }
+}
+
 }
