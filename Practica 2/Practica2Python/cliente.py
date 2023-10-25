@@ -2,17 +2,17 @@ import socket
 import os
 import time
 
-def main():
+def send_file(client_socket): #////////////////////////////////////////////////
     # Configuración del cliente
     host = '127.0.0.1'
     port = 12345
     buffer_size = 30720
 
     # Carpeta de archivos del cliente
-    client_folder = "C:/Users/Dell/Desktop/ESCOM/Redes 2/Duplex-ACR/FlujoArchivo/Practica 2/Practica2Python/ArchivosCliente/"
+    client_folder = "C:/ArchivosCliente/"
 
-    # Crear un socket UDP
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+     # Enviar una solicitud al servidor para recibir un archivo
+    client_socket.sendto(b"SEND", (host, port))
 
     # Solicitar al usuario el nombre del archivo a enviar
     file_name = input("Ingrese el nombre del archivo a enviar: ")
@@ -51,6 +51,31 @@ def main():
         print("Archivo enviado con éxito")
     else:
         print(f"El archivo '{file_name}' no existe en la ubicación especificada.")
+    input("Presiona Enter...")
+    os.system('cls')
+
+def main():
+    # Configuración del cliente
+    host = '127.0.0.1'  # Dirección IP del servidor
+    port = 12345       # Puerto del servidor
+
+    # Crear un socket UDP
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    while True:
+        print("Menu:")
+        print("1. Enviar un archivo al servidor")
+        print("2. Salir")
+
+        choice = input("Elija una opción (1/2): ")
+
+        if choice == '1':
+            send_file(client_socket)
+        elif choice == '2':
+            print("Gracias por usarnos. Hasta la próxima...")
+            break
+        else:
+            print("Opción no válida. Intente de nuevo.")
 
     client_socket.close()
 
