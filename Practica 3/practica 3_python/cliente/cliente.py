@@ -19,9 +19,8 @@ def receive_messages(client_socket):
                 print(users_message)
             else:
                 print(message)
-        except:
-            # En caso de error, si no se puede recibir el mensaje, desconectar el cliente
-            print("¡Error de conexión!")
+        except Exception as e:
+            print(f"Error en receive_messages: {e}")
             client_socket.close()
             break
 
@@ -39,7 +38,7 @@ receive_thread.start()
 
 # Enviar mensajes al servidor
 while True:
-    message = input()
+    message = input("Ingrese un mensaje ('@nombre_destinatario:mensaje' para mensaje privado, 'salir' para salir): ")
     if message == 'salir':
         client_socket.send(message.encode('utf-8'))
         break
