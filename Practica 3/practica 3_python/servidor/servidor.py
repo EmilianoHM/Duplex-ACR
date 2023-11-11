@@ -26,7 +26,7 @@ def broadcast(message, sender_socket, recipient_socket=None):
 # Función para enviar la lista de usuarios conectados a todos los clientes
 def broadcast_users_list():
     users = ', '.join(clients.values())
-    user_list_message = f'Usuarios conectados: {users}'
+    user_list_message = f'\nUsuarios conectados: {users}'
 
     # Enviar la lista de usuarios actualizada a todos los clientes
     broadcast(user_list_message.encode('utf-8'), None)
@@ -50,11 +50,11 @@ def handle_client(client_socket):
     global clients  # Hacer referencia a la variable global
     try:
         # Pedir el nombre del cliente
-        client_socket.send("Ingrese su nombre: ".encode('utf-8'))
+        #client_socket.send("Ingrese su nombre: ".encode('utf-8'))
         name = client_socket.recv(1024).decode('utf-8')
 
         # Saludar al cliente
-        welcome_message = f"Bienvenido, {name}! Para salir del chat, escriba 'salir'."
+        welcome_message = f"\nBienvenido, {name}!"
         client_socket.send(welcome_message.encode('utf-8'))
 
         # Agregar al cliente a la lista de clientes
@@ -103,7 +103,7 @@ def get_client_socket_by_name(client_name):
 while True:
     client_socket, client_address = server_socket.accept()
     print(f"Conexión desde: {client_address[0]}:{client_address[1]}")
-    client_socket.send("Conectado al servidor de chat. Escribe 'salir' para salir.".encode('utf-8'))
+    client_socket.send("Conectado al servidor de chat. \nEscribe 'salir' para salir.".encode('utf-8'))
 
     # Iniciar un hilo para manejar al cliente
     client_handler = threading.Thread(target=handle_client, args=(client_socket,))

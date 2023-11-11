@@ -1,6 +1,22 @@
 import socket
 import threading
 
+# Lista de emojis predefinidos para mostrar al inicio del chat
+emojis_list = {
+    "1": "😊",
+    "2": "😂",
+    "3": "😎",
+    "4": "❤️",
+    "5": "👍",
+    "6": "😍"
+}
+
+# Función para mostrar la lista de emojis al inicio del chat
+def show_emojis():
+    print("Lista de Emojis:")
+    for key, emoji in emojis_list.items():
+        print(f"Opción {key}: {emoji}")
+
 # Configurar el cliente
 host = "localhost"
 port = 12345
@@ -32,6 +48,9 @@ client_socket.connect((host, port))
 name = input("Ingrese su nombre: ")
 client_socket.send(name.encode('utf-8'))
 
+# Mostrar la lista de emojis
+show_emojis()
+
 # Iniciar un hilo para recibir mensajes
 receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
 receive_thread.start()
@@ -42,8 +61,14 @@ while True:
     if message == 'salir':
         client_socket.send(message.encode('utf-8'))
         break
+    elif message in emojis_list:
+        # Si el mensaje corresponde a un emoji de la lista, enviar el emoji al servidor
+        selected_emoji = emojis_list[message]
+        client_socket.send(selected_emoji.encode('utf-8'))
     else:
         client_socket.send(message.encode('utf-8'))
 
 # Cerrar el cliente
 client_socket.close()
+
+#C:/Users/emhurtad/AppData/Local/Microsoft/WindowsApps/python3.11.exe "c:/Users/emhurtad/Documents/Escuela/Duplex-ACR/Practica 3/practica 3_python/cliente/cliente.py"
