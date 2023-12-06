@@ -5,6 +5,9 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.PdfWriter;
 
 public class PracticaHTTP {
 
@@ -30,11 +33,10 @@ public class PracticaHTTP {
                 + "</body></html>";
         protected String E404 = "HTTP/1.1 404 Not Found\n"
                 + "Date: " + new Date() + "\n"
-                + "Server: EGZ_KYF Server/1.0\n"
+                + "Server: Server de Jorge & Emi /1.0\n"
                 + "Content-Type: text/html \n\n"
                 + "<html><head><meta charset='UTF-8'><title>404 NOT FOUND  </title></head>"
-                + "<body><h1> Puede tratarse de una pÃ¡gina eliminada que no tiene reemplazo o equivalente"
-                + " o se trata de una pÃ¡gina que simplemente no existe </h1>";
+                + "<body><h1> La página no se encontró o no existe</h1>";
         protected final String E500 = "<html><head><meta charset='UTF-8'><title>500 INTERNAL SERVER ERROR  </title></head>"
                 + "<body><h1> UPS, OCURRIÃ“ UN ERROR INESPERADO</h1>"
                 + "<p>No se pudo concretar la operacion</p>"
@@ -69,7 +71,7 @@ public class PracticaHTTP {
             try {
                 String linea = br.readLine(); // Se lee la peticion que se va a ejecutar
                 if (linea == null) { // si la linea esta vací­a se envia texto html
-                    pw.print("<html><head><title>Servidor WEB EGZ_KYF");
+                    pw.print("<html><head><title>Servidor Jorge & Emi");
                     pw.print("</title><body bgcolor=\"#AACCFF\"<br>Linea Vacia</br>");
                     pw.print("</body></html>");
                     socket.close();
@@ -95,36 +97,39 @@ public class PracticaHTTP {
                     getFileName(linea);//Se actualiza el file name segun la peticion recibida
                     PUT();
                 } else if (linea.toUpperCase().startsWith("POST")) {
-                    System.out.println("Recibiendo POST...");
-                    int tam = dis.available(); // Se lee el tamaÃ±o del flujo de entrada para saber que tamaño tiene que leer
-                    byte[] b = new byte[tam];//Se inicia un arreglo de bytes con el tamaÃ±o obtenido
-                    dis.read(b);//Se leen los datos
-                    String request;
-                    if (linea.contains("=")) {
-                        request = linea;
-                    } else {
-                        request = new String(b, 0, tam);
-                    }
+                        System.out.println("Recibiendo POST...");
+                        int tam = dis.available(); // Se lee el tamaño del flujo de entrada para saber que tamaño tiene que leer
+                        byte[] b = new byte[tam];//Se inicia un arreglo de bytes con el tamaño obtenido
+                        dis.read(b);//Se leen los datos
+                        String request;
+                        if(linea.contains("=")){
+                            request = linea;
+                        }else{
+                            request = new String(b, 0, tam);
+                        }
 
-                    String htmlPost = POST(request);// Se manda a llamar la funcion POST recuperando una String que representa la respuesta
-                    System.out.println("Respuesta:");
-                    System.out.println(htmlPost);
-                    pw.println(htmlPost);
+                        String htmlPost = POST(request);// Se manda a llamar la función POST recuperando una String que representa la respuesta
+                        System.out.println("Respuesta:");
+                        System.out.println(htmlPost);
+                        pw.println(htmlPost);
+                        pw.flush();
+                        bos.flush();
+                    }
+                    else if (!linea.contains("?"))
+                    {
+                        getFileName(linea);
+                        if(FileName.compareTo("")==0)
+                            SendF(path+"index.html");
+                        else
+                            SendF(path+FileName);
+                    }
+                    else
+                    {
+                        pw.println("HTTP/1.0 501 Not Implemented");
+                        pw.println();
+                    }
                     pw.flush();
                     bos.flush();
-                } else if (!linea.contains("?")) {
-                    getFileName(linea);
-                    if (FileName.compareTo("") == 0) {
-                        SendF(path + "index.html");
-                    } else {
-                        SendF(path + FileName);
-                    }
-                } else {
-                    pw.println("HTTP/1.0 501 Not Implemented");
-                    pw.println();
-                }
-                pw.flush();
-                bos.flush();
 
             } catch (Exception e) { // End of TRY.... RUN
                 e.printStackTrace();
@@ -143,7 +148,7 @@ public class PracticaHTTP {
                         String contentType = "text/html";
                         String headerHTTP = "HTTP/1.1 " + 200 + " " + "OK" + "\n"
                                 + "Date: " + new Date() + "\n"
-                                + "Server: EGZ_KYF Server/1.0\n"
+                                + "Server: Server de Jorge & Emi /1.0\n"
                                 + "Content-Type: " + contentType + " \n\n";
                         pw.println(headerHTTP + deleteHtml_Ok);
                         pw.flush();
@@ -152,7 +157,7 @@ public class PracticaHTTP {
                         String contentType = "text/html";
                         String headerHTTP = "HTTP/1.1 " + 500 + " " + "Internal Server Error" + "\n"
                                 + "Date: " + new Date() + "\n"
-                                + "Server: EGZ_KYF Server/1.0\n"
+                                + "Server: Server de Jorge & Emi /1.0\n"
                                 + "Content-Type: " + contentType + " \n";
                         pw.println(headerHTTP + "\n" + E500);//Se actualizan los parametros anteriores y envia encabezado y http con mensaje.
                         pw.flush();
@@ -172,37 +177,130 @@ public class PracticaHTTP {
             }
         }//END of Method DELETE....
 
-        public void PUT() {
-            try {
-                // Leer el cuerpo de la solicitud
-                StringBuilder requestBody = new StringBuilder();
-                String line;
-                while ((line = br.readLine()) != null && !line.isEmpty()) {
-                    requestBody.append(line).append("\n");
-                }
+        
 
-                // Crea o actualiza el archivo
-                File file = new File(path + FileName);
-                boolean isNewFile = file.createNewFile();
-                try ( FileWriter fileWriter = new FileWriter(file)) {
-                    fileWriter.write(requestBody.toString());
-                }
+public void PUT() {
+    try {
+        // Leer el cuerpo de la solicitud
+        StringBuilder requestBody = new StringBuilder();
+        boolean bodyStarted = false;  // Indicador de inicio del cuerpo del mensaje
 
-                // Enviar respuesta
-                String responseHeader = isNewFile ? "HTTP/1.1 201 Created\n" : "HTTP/1.1 200 OK\n";
-                pw.println(responseHeader
-                        + "Date: " + new Date() + "\n"
-                        + "Server: EGZ_KYF Server/1.0\n"
-                        + "Content-Length: " + requestBody.length() + "\n\n");
-                pw.flush();
-            } catch (IOException e) {
-                // Manejar excepciones y enviar una respuesta de error si es necesario
-                e.printStackTrace();
+        char[] buffer = new char[1024]; // Utilizaremos un buffer para la lectura
+
+        // Mientras haya datos disponibles en el InputStream
+        while (br.ready()) {
+            int bytesRead = br.read(buffer);
+            
+            // Comprueba si ha empezado el cuerpo del mensaje
+            if (!bodyStarted && new String(buffer, 0, bytesRead).contains("\r\n\r\n")) {
+                bodyStarted = true;
+                requestBody.append(new String(buffer, 0, bytesRead).split("\r\n\r\n")[1]);
+            } else if (bodyStarted && bytesRead > 0) {
+                requestBody.append(buffer, 0, bytesRead);
             }
         }
 
+        // Crea o actualiza el archivo
+        File file = new File(path + FileName);
+        boolean isNewFile = file.createNewFile();
+
+        if (FileName.endsWith(".pdf")) {
+            // Si el archivo es un PDF, utiliza iTextPDF para generar el contenido del PDF
+            generatePdf(requestBody.toString(), file);
+        } else {
+            // Para otros tipos de archivos, simplemente escribe el cuerpo de la solicitud directamente al archivo
+            try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+                fileOutputStream.write(requestBody.toString().getBytes());
+            }
+        }
+
+        // Construir la respuesta
+        String responseHeader = isNewFile ? "HTTP/1.1 201 Created\n" : "HTTP/1.1 200 OK\n";
+        String responseBody = "Date: " + new Date() + "\n"
+                + "Server: Server de Jorge & Emi /1.0\n"
+                + "Content-Length: " + requestBody.length() + "\n\n";
+
+        // Enviar respuesta
+        pw.println(responseHeader + responseBody);
+        pw.flush();
+
+        // Imprimir detalles en el registro del servidor
+        System.out.println("Cliente Conectado desde: " + socket.getInetAddress());
+        System.out.println("Por el puerto: " + socket.getPort());
+        System.out.println("Datos: PUT" + " " + FileName + " HTTP/1.1");
+        System.out.println("Código de respuesta: " + (isNewFile ? 201 : 200));
+        System.out.println("Respuesta: " + (isNewFile ? "Created" : "OK"));
+        System.out.println("Detalles adicionales de la respuesta: " + responseBody);
+
+
+    } catch (Exception e) {
+        // Manejar excepciones y enviar una respuesta de error si es necesario
+        e.printStackTrace();
+        // Añade una respuesta de error al cliente
+        pw.println("HTTP/1.1 500 Internal Server Error\n\n");
+        pw.flush();
+    } finally {
+        // Cierra las conexiones y flujos
+        try {
+            br.close();
+            bos.close();
+            pw.close();
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+private void generatePdf(String content, File file) {
+    try {
+        // Utiliza iTextPDF para generar un archivo PDF con el contenido proporcionado
+        Document document = new Document();
+        PdfWriter.getInstance(document, new FileOutputStream(file));
+        document.open();
+        document.add(new Paragraph(content));
+        document.close();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+
+        
+        
+        
+
+
         public void GET() {
             try {
+                File file = new File(path + FileName);
+
+                // Si es un directorio, lista los archivos dentro
+                if (file.isDirectory()) {
+                    File[] files = file.listFiles();
+
+                    // Construye la respuesta con la lista de archivos y sus tamaños
+                    StringBuilder responseContent = new StringBuilder();
+                    responseContent.append("<html><body><h2>Archivos en la carpeta: ").append(FileName).append("</h2><ul>");
+
+                    if (files != null) {
+                        for (File f : files) {
+                            responseContent.append("<li>").append(f.getName()).append("         - Tamanio: ").append(f.length()).append(" bytes</li>");
+                        }
+                    }
+
+                    responseContent.append("</ul></body></html>");
+
+                    // Envía la respuesta al cliente
+                    String responseHeader = "HTTP/1.1 200 OK\n"
+                            + "Date: " + new Date() + "\n"
+                            + "Server: TuServidor/1.0\n"
+                            + "Content-Type: text/html\n"
+                            + "Content-Length: " + responseContent.length() + "\n\n";
+
+                    pw.println(responseHeader + responseContent.toString());
+                    pw.flush();
+                } else {
                 File temp = new File(path + FileName);
                 if (temp.exists()) {
                     if (SendF(path + FileName)) {//Si la funcion de mandado de archivo regresa true:
@@ -212,12 +310,12 @@ public class PracticaHTTP {
                         String contentType = "text/html";
                         String headerHTTP = "HTTP/1.1 " + 500 + " " + "Internal Server Error" + "\n"
                                 + "Date: " + new Date() + "\n"
-                                + "Server: EGZ_KYF Server/1.0\n"
+                                + "Server: Server de Jorge & Emi /1.0\n"
                                 + "Content-Type: " + contentType + " \n";
                         pw.println(headerHTTP + "\n" + E500);//Se manda el encabezado actualizado y html de Error 500
                         pw.flush();
                     }
-                } else {//Si no existe el archivo que se estÃ¡ intentando obtener:
+                } else {//Si no existe el archivo que se está intentando obtener:
                     System.out.println("peticion de lectura de: " + FileName + "   ha fracasado. NOT FOUND");
                     this.codeNumber = 404;
                     pw.println(E404);//Se manda encabezado y texto html de Error 404
@@ -225,53 +323,52 @@ public class PracticaHTTP {
                 }
                 pw.flush();
                 bos.flush();
-            } catch (Exception e) {
+            } }catch (Exception e) {
                 e.printStackTrace();
             }
         }//END of Method GET....
 
-        public String POST(String request) {
-            int indice = request.indexOf("/");
-            if (request.contains("/")) {
-                if (request.contains("?")) {
-                    request = request.substring(indice + 2);
-                } else {
-                    request = request.substring(indice + 1);
+      public String POST(String request) {
+                int indice = request.indexOf("/");
+                if(request.contains("/")){
+                    if(request.contains("?"))
+                        request = request.substring(indice+2);
+                    else
+                        request = request.substring(indice+1);
+                    StringTokenizer post = new StringTokenizer(request," ");
+                    request = post.nextToken();
                 }
-                StringTokenizer post = new StringTokenizer(request, " ");
-                request = post.nextToken();
-            }
-            String[] reqLineas = request.split("\n");
-            StringTokenizer tokens = new StringTokenizer(reqLineas[reqLineas.length - 1], "&?");
-            System.out.println(reqLineas[reqLineas.length - 1]);
+                String[] reqLineas = request.split("\n");
+                StringTokenizer tokens = new StringTokenizer(reqLineas[reqLineas.length-1], "&?");
+                System.out.println(reqLineas[reqLineas.length-1]);
 
-            String contentType = "text/html";
-            String headerHTTP = "HTTP/1.1 " + "200" + " " + "OK" + "\n"
-                    + "Date: " + new Date() + "\n"
-                    + "Server: EGZ_KYF Server/1.0\n"
-                    + "Content-Type: " + contentType + " \n\n";
-            String html = headerHTTP // encabezado http con los valores actualizados:
-                    + "<html><head><meta charset='UTF-8'><title> metodo POST </title></head>\n"
-                    + "<body ><center><h2> Se han obtenido los siguientes valores con sus respectivos parametros</h2><br>\n"
-                    + "<table border='2'><tr><th>Valores:</th><th>Valor</th></tr>";
+                String contentType = "text/html";
+                String headerHTTP = "HTTP/1.1 "+ "200" +" "+"OK"+"\n"
+                        + "Date: "+new Date()+"\n"
+                        + "Server: EGZ_KYF Server/1.0\n"
+                        + "Content-Type: "+contentType+" \n\n";
+                String html = headerHTTP // encabezado http con los valores actualizados:
+                        + "<html><head><meta charset='UTF-8'><title> Método POST </title></head>\n"
+                        + "<body ><center><h2> Se han obtenido los siguientes valores con sus respectivos parámetros</h2><br>\n"
+                        + "<table border='2'><tr><th>Valores:</th><th>Valor</th></tr>";
 
-            while (tokens.hasMoreTokens()) {
-                String postValues = tokens.nextToken();
-                System.out.println(postValues);
-                StringTokenizer postValue = new StringTokenizer(postValues, "=");
-                String parametro = ""; //Parametro
-                String valor = ""; //Valor
-                if (postValue.hasMoreTokens()) {
-                    parametro = postValue.nextToken();
+                while (tokens.hasMoreTokens()) {
+                    String postValues = tokens.nextToken();
+                    System.out.println(postValues);
+                    StringTokenizer postValue = new StringTokenizer(postValues, "=");
+                    String parametro = ""; //Parámetro
+                    String valor = ""; //Valor
+                    if (postValue.hasMoreTokens()) {
+                        parametro = postValue.nextToken();
+                    }
+                    if (postValue.hasMoreTokens()) {
+                        valor = postValue.nextToken();
+                    }
+                    html = html + "<tr><td><b>" + parametro + "</b></td><td>" + valor + "</td></tr>\n";
                 }
-                if (postValue.hasMoreTokens()) {
-                    valor = postValue.nextToken();
-                }
-                html = html + "<tr><td><b>" + parametro + "</b></td><td>" + valor + "</td></tr>\n";
+                html = html + "</table></center></body></html>";
+                return html;
             }
-            html = html + "</table></center></body></html>";
-            return html;
-        }
 
         public void HEAD(String linea) throws Exception {
             getFileName(linea);
@@ -285,7 +382,7 @@ public class PracticaHTTP {
                     String contentType = "text/html";
                     String headerHTTP = "HTTP/1.1 " + codeNumber + " " + response + "\n"
                             + "Date: " + new Date() + "\n"
-                            + "Server: EGZ_KYF Server/1.0\n"
+                            + "Server: Server de Jorge & Emi /1.0\n"
                             + "Content-Type: " + contentType + " \n";
                     pw.println(headerHTTP + "\n" + E403);//Se manda el encabezado actualizado y la seccion html Error 403
                 } else {//Si el archivo existe: se mandan los encabezados actualizando el tipo de archivo
@@ -294,7 +391,7 @@ public class PracticaHTTP {
                     String contentType = MIME.get(ext);
                     String headerHTTP = "HTTP/1.1 " + codeNumber + " " + response + "\n"
                             + "Date: " + new Date() + "\n"
-                            + "Server: EGZ_KYF Server/1.0\n"
+                            + "Server: Server de Jorge & Emi /1.0\n"
                             + "Content-Type: " + contentType + " \n";
                     pw.println(headerHTTP + "Content-Length: " + file.length() + " \n\n");//Se aÃ±ade fileLength al encabezado
                     System.out.println(headerHTTP + "Content-Length: " + file.length() + " \n\n");
@@ -315,7 +412,7 @@ public class PracticaHTTP {
                 String contentType = "text/html";
                 String headerHTTP = "HTTP/1.1 " + codeNumber + " " + response + "\n"
                         + "Date: " + new Date() + "\n"
-                        + "Server: EGZ_KYF Server/1.0\n"
+                        + "Server: Server de Jorge & Emi /1.0\n"
                         + "Content-Type: " + contentType + " \n";
                 pw.println(headerHTTP);
             }
@@ -342,11 +439,11 @@ public class PracticaHTTP {
                 int b_leidos;
                 BufferedInputStream bis2 = new BufferedInputStream(new FileInputStream(file));
                 byte[] buf = new byte[1024];
-                int tam_archivo = bis2.available();//Se mide el tamaÃ±o a partir del flujo obtenido
+                int tam_archivo = bis2.available();//Se mide el tamaño a partir del flujo obtenido
 
                 //Se prepara y se escribe el encabezado del archivo que se va a mandar:
                 String head = "HTTP/1.0 202 Accepted\n"
-                        + "Server: EGZ_KYF Server/1.0 \n"
+                        + "Server: Server de Jorge & Emi /1.0\n"
                         + "Date: " + new Date() + " \n"
                         + "Content-Type: " + MIME.get(ext) + " \n"//Se utiliza el contentType obtenido con el diccionario MIME
                         + "Content-Length: " + tam_archivo + " \n\n";
@@ -373,14 +470,14 @@ public class PracticaHTTP {
 
         System.out.println("Servidor iniciado...");
         try ( Scanner scan = new Scanner(System.in)) {
-            System.out.print("Tam del pool de conexiones que desea: \n");
+            System.out.print("Ingresa el tamaño del pool de conexiones que desea: \n");
             poolSize = scan.nextInt();
         }
-        ExecutorService poolHilos = Executors.newFixedThreadPool(poolSize); // aquÃ­ se define el tamaÃ±o
+        ExecutorService poolHilos = Executors.newFixedThreadPool(poolSize); // aquí­ se define el tamaño
 
         this.servSoc = new ServerSocket(port);
         for (;;) {
-            System.out.println("Esperando Cliente... en puerto" + port);
+            System.out.println("Esperando Cliente... en el puerto " + port);
             Socket cliente = servSoc.accept();
             poolHilos.execute(new Manejador(cliente)); // Se ejecuta segun el pool de hilos :)
         }
